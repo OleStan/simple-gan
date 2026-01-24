@@ -15,25 +15,25 @@ class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
         self.main = nn.Sequential(
-            # input 1824
+            # input 2048
             nn.Conv1d(1, 64, kernel_size=4, stride=2, padding=1, bias=False),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size 912
+            # state size 1024
             nn.Conv1d(64, 128, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm1d(128),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size 456
+            # state size 512
             nn.Conv1d(128, 256, kernel_size=4,
                       stride=2, padding=1, bias=False),
             nn.BatchNorm1d(256),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size 228
+            # state size 256
             nn.Conv1d(256, 512, kernel_size=4,
                       stride=2, padding=1, bias=False),
             nn.BatchNorm1d(512),
             nn.LeakyReLU(0.2, inplace=True),
-            # state size 114
-            nn.Conv1d(512, 1, kernel_size=114, stride=1, padding=0, bias=False),
+            # state size 128
+            nn.Conv1d(512, 1, kernel_size=128, stride=1, padding=0, bias=False),
             nn.Sigmoid()
         )
 
@@ -46,7 +46,7 @@ class Generator(nn.Module):
     def __init__(self, nz):
         super().__init__()
         self.main = nn.Sequential(
-            nn.ConvTranspose1d(nz, 512, 114, 1, 0, bias=False),
+            nn.ConvTranspose1d(nz, 512, 128, 1, 0, bias=False),
             nn.BatchNorm1d(512),
             nn.ReLU(True),
 

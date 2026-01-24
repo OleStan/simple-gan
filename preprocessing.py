@@ -26,6 +26,10 @@ class Dataset():
         dataset = []
         for _file in os.listdir(self.root):
             sample = np.loadtxt(os.path.join(self.root, _file)).T
+            if len(sample) == 2185:
+                sample = sample[:2048]
+            elif len(sample) < 2048:
+                sample = np.pad(sample, (0, 2048 - len(sample)), mode='edge')
             dataset.append(sample)
         dataset = np.vstack(dataset).T
         dataset = torch.from_numpy(dataset).float()
