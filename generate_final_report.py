@@ -10,11 +10,15 @@ from wgan import Generator
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-output_dir = './results_wgan_' + datetime.now().strftime('%Y%m%d_%H%M%S')
+results_root = './results'
+os.makedirs(results_root, exist_ok=True)
+
+output_dir = os.path.join(results_root, 'wgan_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
 os.makedirs(output_dir, exist_ok=True)
 os.makedirs(os.path.join(output_dir, 'visualizations'), exist_ok=True)
 os.makedirs(os.path.join(output_dir, 'models'), exist_ok=True)
 os.makedirs(os.path.join(output_dir, 'training_images'), exist_ok=True)
+os.makedirs(os.path.join(output_dir, 'generated_samples'), exist_ok=True)
 
 print("Loading dataset...")
 dataset = Dataset('./data/brilliant_blue')
@@ -152,11 +156,9 @@ noise = torch.randn(num_generated, nz, 1, device=device)
 with torch.no_grad():
     generated_signals = netG(noise).cpu().numpy()
 
-samples_dir = os.path.join(output_dir, 'generated_samples')
-os.makedirs(samples_dir, exist_ok=True)
 for i in range(num_generated):
     signal = generated_signals[i].flatten()
-    np.savetxt(os.path.join(samples_dir, f'generated_signal_{i:03d}.txt'), signal, fmt='%.6f')
+    np.savetxt(os.path.join(output_dir, 'generated_samples', f'generated_signal_{i:03d}.txt'), signal, fmt='%.6f')
 print(f"   Saved {num_generated} generated signals as txt files")
 
 print("8. Creating final summary plot...")

@@ -5,6 +5,7 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 from dcgan import Discriminator, Generator, weights_init
 from preprocessing import Dataset
 
@@ -20,7 +21,9 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def main():
-    # load training data
+    os.makedirs('./img', exist_ok=True)
+    os.makedirs('./nets', exist_ok=True)
+    
     trainset = Dataset('./data/brilliant_blue')
 
     trainloader = torch.utils.data.DataLoader(

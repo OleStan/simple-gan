@@ -61,6 +61,7 @@ def main() -> None:
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+    os.makedirs(args.out_root, exist_ok=True)
     run_dir = os.path.join(args.out_root, 'mddect_wgan_' + datetime.now().strftime('%Y%m%d_%H%M%S'))
     viz_dir = os.path.join(run_dir, 'visualizations')
     models_dir = os.path.join(run_dir, 'models')
