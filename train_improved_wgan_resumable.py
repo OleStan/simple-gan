@@ -75,7 +75,7 @@ def save_checkpoint(epoch, netG, netC, optimizerG, optimizerC, training_history,
 
 def load_checkpoint(checkpoint_path, netG, netC, optimizerG, optimizerC, device):
     """Load training checkpoint."""
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     netG.load_state_dict(checkpoint['netG_state_dict'])
     netC.load_state_dict(checkpoint['netC_state_dict'])
