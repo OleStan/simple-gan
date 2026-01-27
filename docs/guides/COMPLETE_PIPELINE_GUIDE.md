@@ -210,3 +210,21 @@ Contains:
 - Add stronger shape constraints (TV, curvature, monotonic segments)
 - Add forward-model-based evaluation (simulate eddy current response)
 - Consider diffusion or normalizing flows for improved coverage/stability
+
+### Recommendations
+#### Short-term (After Current Training)
+1. Run comparison script to quantify improvements
+2. Generate larger sample sets (5000+) for statistical significance
+3. Visualize specific profile types (linear, exponential, etc.)
+
+#### Medium-term Enhancements
+1. Conditional Generation: Add profile type labels
+2. Attention Mechanisms: Focus on important depth regions
+3. Curriculum Learning: Start with simple profiles, increase complexity
+4. Wasserstein Distance Tracking: Monitor convergence quality
+
+#### Long-term Research Directions
+1. VAE-GAN Hybrid: Add reconstruction loss for stability
+2. Multi-scale Generation: Hierarchical coarse-to-fine
+3. Physical Forward Model: Incorporate actual eddy current equations
+4. Active Learning: Generate profiles that improve downstream tasks
