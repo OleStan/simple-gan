@@ -1,0 +1,42 @@
+===============================================================================
+PARALLEL TRAINING STATUS - Sigmoid Profiles with Opposite Relationship
+===============================================================================
+Started: January 31, 2026 at 9:31 PM
+
+TRAINING DATA:
+- Profile Type: SIGMOID (curved profiles)
+- Layers (K): 51
+- Samples: 2000
+- Relationship: OPPOSITE (σ↑ → μ↓)
+- σ₁ (fixed): ~1.88×10⁷ S/m
+- σ₅₁ (variable): 3.766×10⁷ ± 7.5%
+- μ₁ (fixed): ~8.75
+- μ₅₁ (variable): ~1.04
+
+RUNNING PROCESSES:
+1. Dual WGAN Training
+   - Process ID: 55869
+   - Log file: dual_wgan_training.log
+   - Status: RUNNING (Epoch 15/500)
+   - Output: results/dual_wgan_YYYYMMDD_HHMMSS/
+
+2. Improved WGAN v2 Training
+   - Process ID: 56050
+   - Log file: improved_wgan_v2_training.log
+   - Status: RUNNING
+   - Output: results/improved_wgan_v2_YYYYMMDD_HHMMSS/
+
+MONITORING COMMANDS:
+- Check dual WGAN progress: tail -f dual_wgan_training.log
+- Check improved WGAN v2 progress: tail -f improved_wgan_v2_training.log
+- Check running processes: ps aux | grep -E "train_(dual_wgan|improved_wgan_v2)" | grep -v grep
+- Stop dual WGAN: pkill -f "train_dual_wgan.py"
+- Stop improved WGAN v2: pkill -f "train_improved_wgan_v2.py"
+
+TRAINING CONFIGURATION:
+- Epochs: 500
+- Batch size: 32
+- Learning rate: varies by model
+- Device: CPU/CUDA (auto-detected)
+
+===============================================================================

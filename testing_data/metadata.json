@@ -1,0 +1,17 @@
+{
+  "N": 500,
+  "K": 51,
+  "feature_dim": 102,
+  "r_min": 0.0,
+  "r_max": 1.0,
+  "profile_type": "linear",
+  "relationship": "opposite",
+  "table": "3.5",
+  "material_type": "non-magnetic",
+  "sigma_1": 18800000.0,
+  "sigma_51": 37660000.0,
+  "mu_r1": 1.0,
+  "mu_r51": 100.0,
+  "discretization_mode": "centers",
+  "seed": 42
+}

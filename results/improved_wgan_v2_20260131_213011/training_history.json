@@ -1,0 +1,43 @@
+{
+  "loss_C": [
+    -3.591062545776367
+  ],
+  "loss_G": [
+    -5.319843292236328
+  ],
+  "loss_G_adv": [
+    -5.319843292236328
+  ],
+  "loss_G_physics": [
+    0.0
+  ],
+  "wasserstein_distance": [
+    3.3685245513916016
+  ],
+  "gradient_penalty": [
+    0.0
+  ],
+  "physics_weight": [
+    0.0
+  ],
+  "quality_metrics": {
+    "sigma_smoothness": [
+      0.9908960461616516
+    ],
+    "mu_smoothness": [
+      0.9917541742324829
+    ],
+    "sigma_monotonicity": [
+      0.548469387755102
+    ],
+    "mu_monotonicity": [
+      0.5586734693877551
+    ],
+    "sigma_diversity": [
+      2.3639307022094727
+    ],
+    "mu_diversity": [
+      2.121811866760254
+    ]
+  }
+}

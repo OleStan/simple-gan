@@ -64,7 +64,10 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
-    K = 50
+    with open('./training_data/normalization_params.json', 'r') as f:
+        norm_params = json.load(f)
+    
+    K = norm_params['K']
     nz = 100
     batch_size = 32
     n_epochs = 500
@@ -82,11 +85,12 @@ def main():
                             './training_data/normalization_params.json')
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
     
-    with open('./training_data/normalization_params.json', 'r') as f:
-        norm_params = json.load(f)
-    
     with open(output_dir / 'normalization_params.json', 'w') as f:
         json.dump(norm_params, f, indent=2)
+    
+    print(f"\nDataset configuration:")
+    print(f"  K (layers): {K}")
+    print(f"  Samples: {len(dataset)}")
     
     netG = DualHeadGenerator(nz=nz, K=K).to(device)
     netC = Critic(input_dim=2*K).to(device)

@@ -1,0 +1,35 @@
+{
+  "K": 51,
+  "r_min": 0.0,
+  "r_max": 1.0,
+  "physical_depth": 0.001,
+  "sigma_bounds": [
+    1000000.0,
+    60000000.0
+  ],
+  "mu_bounds": [
+    1.0,
+    100.0
+  ],
+  "normalize_to_range": [
+    -1.0,
+    1.0
+  ],
+  "default_frequency": 1000000.0,
+  "default_inner_radius": 0.004,
+  "default_outer_radius": 0.006,
+  "default_lift_off": 0.0005,
+  "default_coil_height": 0.002,
+  "default_n_turns": 100,
+  "inverse_max_iter": 1000,
+  "inverse_n_starts": 10,
+  "inverse_tol": 1e-06,
+  "inverse_method": "L-BFGS-B",
+  "lambda_smooth": 0.001,
+  "lambda_monotonic": 0.01,
+  "db_path": "./profile_database.h5",
+  "db_k_neighbors": 5,
+  "training_data_dir": "./training_data",
+  "results_dir": "./results",
+  "seed": 42
+}

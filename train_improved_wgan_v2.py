@@ -111,10 +111,14 @@ def main():
     lambda_gp = 10
     lr_g = 5e-5
     lr_c = 2e-4
+    with open('./training_data/normalization_params.json', 'r') as f:
+        norm_params_temp = json.load(f)
+    
+    K = norm_params_temp['K']
+    
     epoch_num = 500
     batch_size = 32
     nz = 100
-    K = 50
     
     use_spectral_norm = True
     use_gradient_penalty = False

@@ -105,6 +105,64 @@ def plot_sample_profiles(sigma_samples, mu_samples, n_display=16, save_path=None
     return fig
 
 
+def plot_paired_comparison(real_data_path, sigma_gen, mu_gen, K, n_pairs=6, save_path=None):
+    """Plot side-by-side comparison of real vs generated profile pairs."""
+    real_data = np.load(real_data_path)
+    sigma_real = real_data[:, :K]
+    mu_real = real_data[:, K:2*K]
+    
+    n_samples_real = min(len(sigma_real), n_pairs)
+    n_samples_gen = min(len(sigma_gen), n_pairs)
+    
+    fig, axes = plt.subplots(n_pairs, 2, figsize=(14, 3*n_pairs))
+    
+    for i in range(n_pairs):
+        ax_real = axes[i, 0]
+        ax_gen = axes[i, 1]
+        
+        ax_real2 = ax_real.twinx()
+        ax_gen2 = ax_gen.twinx()
+        
+        ax_real.plot(sigma_real[i], 'b-', linewidth=2, label='σ')
+        ax_real2.plot(mu_real[i], 'r-', linewidth=2, label='μ')
+        
+        ax_gen.plot(sigma_gen[i], 'b-', linewidth=2, label='σ')
+        ax_gen2.plot(mu_gen[i], 'r-', linewidth=2, label='μ')
+        
+        ax_real.set_ylabel('σ (S/m)', color='b', fontsize=10)
+        ax_real2.set_ylabel('μᵣ', color='r', fontsize=10)
+        ax_gen.set_ylabel('σ (S/m)', color='b', fontsize=10)
+        ax_gen2.set_ylabel('μᵣ', color='r', fontsize=10)
+        
+        ax_real.tick_params(axis='y', labelcolor='b')
+        ax_real2.tick_params(axis='y', labelcolor='r')
+        ax_gen.tick_params(axis='y', labelcolor='b')
+        ax_gen2.tick_params(axis='y', labelcolor='r')
+        
+        if i == 0:
+            ax_real.set_title('Real Data', fontsize=12, fontweight='bold')
+            ax_gen.set_title('Generated Data', fontsize=12, fontweight='bold')
+        
+        if i == n_pairs - 1:
+            ax_real.set_xlabel('Layer', fontsize=10)
+            ax_gen.set_xlabel('Layer', fontsize=10)
+        
+        ax_real.grid(True, alpha=0.3)
+        ax_gen.grid(True, alpha=0.3)
+        
+        ax_real.text(0.02, 0.98, f'Pair {i+1}', transform=ax_real.transAxes,
+                    fontsize=9, verticalalignment='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    plt.suptitle('Real vs Generated Profile Pairs Comparison', fontsize=14, fontweight='bold', y=0.995)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    
+    return fig
+
+
 def plot_distribution_comparison(real_data_path, sigma_gen, mu_gen, K, save_path=None):
     """Compare distributions of real vs generated data."""
     real_data = np.load(real_data_path)
@@ -250,20 +308,24 @@ def generate_report(model_dir, n_samples=1000):
     
     print("\nGenerating visualizations...")
     
-    print("  1/4 Sample profiles...")
+    print("  1/5 Sample profiles...")
     plot_sample_profiles(sigma_gen, mu_gen, n_display=16, 
                         save_path=f'{report_dir}/sample_profiles.png')
     
-    print("  2/4 Distribution comparison...")
+    print("  2/5 Paired comparison (Real vs Generated)...")
+    plot_paired_comparison('./training_data/X_raw.npy', sigma_gen, mu_gen, K, n_pairs=6,
+                          save_path=f'{report_dir}/paired_comparison.png')
+    
+    print("  3/5 Distribution comparison...")
     plot_distribution_comparison('./training_data/X_raw.npy', sigma_gen, mu_gen, K,
                                 save_path=f'{report_dir}/distribution_comparison.png')
     
-    print("  3/4 Training curves...")
+    print("  4/5 Training curves...")
     curves_fig = plot_training_curves(model_dir, save_path=f'{report_dir}/training_curves.png')
     if curves_fig is None:
         print("    Skipping training curves (will be available when training completes)")
     
-    print("  4/4 Additional samples...")
+    print("  5/5 Additional samples...")
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     for i in range(6):
         ax = axes[i // 3, i % 3]
@@ -312,10 +374,11 @@ def generate_report(model_dir, n_samples=1000):
     print("Report Generation Complete!")
     print("="*60)
     print(f"\nReport saved to: {report_dir}/")
-    print(f"  - sample_profiles.png")
-    print(f"  - distribution_comparison.png")
-    print(f"  - training_curves.png")
-    print(f"  - detailed_samples.png")
+    print(f"  - sample_profiles.png (16 generated samples)")
+    print(f"  - paired_comparison.png (Real vs Generated pairs)")
+    print(f"  - distribution_comparison.png (Statistical comparison)")
+    print(f"  - training_curves.png (Training metrics)")
+    print(f"  - detailed_samples.png (6 detailed samples)")
     print(f"  - generated_sigma.npy ({sigma_gen.shape})")
     print(f"  - generated_mu.npy ({mu_gen.shape})")
     print(f"  - generation_stats.json")
