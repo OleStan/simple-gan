@@ -21,10 +21,12 @@ wheels/
 *.egg
 
 # Training data
-data/training/*.npy
+*.npy
+*.csv
 data/training/archive_*/
-data/testing/*.npy
 data/raw/
+training_data/
+training_data_archive_*/
 
 # Model results and checkpoints
 models/*/results/
@@ -32,6 +34,7 @@ models/*/checkpoints/
 *.pth
 *.pt
 *.ckpt
+*.pkl
 
 # Training outputs
 results/experiments/*
@@ -81,6 +84,7 @@ models/legacy/nets/
 *.zip
 *.tar.gz
 *.rar
+*.gif
 
 # Don't ignore normalization params (needed for reproducibility)
 !data/training/normalization_params.json
