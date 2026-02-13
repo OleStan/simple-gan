@@ -1,0 +1,20 @@
+{
+  "N": 2000,
+  "K": 51,
+  "feature_dim": 102,
+  "r_min": 0.0,
+  "r_max": 1.0,
+  "profile_type": "sigmoid",
+  "relationship": "opposite",
+  "fixed_boundaries": {
+    "sigma_1": 18800000.0,
+    "sigma_51_center": 37660000.0,
+    "sigma_51_variation_percent": 0.075,
+    "mu_1": 1.0,
+    "mu_51_center": 8.8,
+    "mu_51_variation_percent": 0.075
+  },
+  "discretization_mode": "centers",
+  "seed": 42,
+  "based_on": "Table 3.5 specifications"
+}

@@ -1,9 +1,87 @@
-/data
-/fakedata
-/utils.py
-/__pycache__
-*[1234567890].png
-/models
-/Users/olesstankevych/ole/study/GANs/simple_gan/GANs_1D_Signal/GANs-for-1D-Signal/results_wgan_20260112_231952
-training_data/*
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Training data
+data/training/*.npy
+data/training/archive_*/
+data/testing/*.npy
+data/raw/
+
+# Model results and checkpoints
+models/*/results/
+models/*/checkpoints/
+*.pth
+*.pt
+*.ckpt
+
+# Training outputs
+results/experiments/*
+results/visualizations/*
+results/quality_reports/*
+*.log
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Runpod
 runpod/.env
+models/runpod/.env
+
+# Legacy (keep in git for reference, but ignore generated outputs)
+models/legacy/results/
+models/legacy/img/
+models/legacy/nets/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Large files
+*.zip
+*.tar.gz
+*.rar
+
+# Don't ignore normalization params (needed for reproducibility)
+!data/training/normalization_params.json
+!**/normalization_params.json
