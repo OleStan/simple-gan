@@ -1,0 +1,37 @@
+{
+  "model_name": "Dual-Head WGAN",
+  "overall_passed": true,
+  "criteria": {
+    "1_moment_matching": {
+      "passed": true,
+      "mean_rel_diff": 0.10608013328271855,
+      "variance_ratio": 1.213712643726414,
+      "mode_collapse": false,
+      "noise_amplification": false
+    },
+    "2_distribution_distance": {
+      "wasserstein_mean": 0.039870118499408205,
+      "mmd_score": 0.26588328541663475,
+      "mmd_sigma": 0.11972309423697436,
+      "mmd_mu": 0.1461601911796604
+    },
+    "3_latent_traversal": {
+      "passed": true,
+      "active_dimensions": 20,
+      "total_tested": 20,
+      "inactive_ratio": 0.0,
+      "smoothness_score": 1.0
+    },
+    "4_physics_consistency": {
+      "passed": true,
+      "bounds_sigma_ratio": 1.0,
+      "bounds_mu_ratio": 1.0,
+      "forward_valid": 20,
+      "forward_total": 20
+    },
+    "5_noise_robustness": {
+      "passed": true,
+      "mean_lipschitz": 0.8482325720787048
+    }
+  }
+}

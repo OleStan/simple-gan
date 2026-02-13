@@ -1,0 +1,10 @@
+{
+  "nz": 32,
+  "K": 51,
+  "batch_size": 32,
+  "n_epochs": 500,
+  "lr": 0.0001,
+  "n_critic": 5,
+  "lambda_gp": 10,
+  "experiment": "smaller_latent_nz32"
+}

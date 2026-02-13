@@ -434,23 +434,32 @@ def main():
     plt.grid(True)
     
     if training_history['quality_metrics']['sigma_smoothness']:
-        epochs_evaluated = list(range(0, epoch_num, 10))
+        # Calculate actual evaluation epochs based on start epoch
+        total_epochs = len(training_history['loss_C'])
+        epochs_evaluated = list(range(start_epoch + (10 - start_epoch % 10) if start_epoch % 10 != 0 else start_epoch, total_epochs, 10))
+        if not epochs_evaluated and start_epoch <= 10:
+            epochs_evaluated = list(range(0, total_epochs, 10))
         
-        plt.subplot(3, 3, 6)
-        plt.plot(epochs_evaluated, training_history['quality_metrics']['sigma_smoothness'], label='σ')
-        plt.plot(epochs_evaluated, training_history['quality_metrics']['mu_smoothness'], label='μ')
-        plt.title('Smoothness')
-        plt.xlabel('Epoch')
-        plt.legend()
-        plt.grid(True)
-        
-        plt.subplot(3, 3, 7)
-        plt.plot(epochs_evaluated, training_history['quality_metrics']['sigma_diversity'], label='σ')
-        plt.plot(epochs_evaluated, training_history['quality_metrics']['mu_diversity'], label='μ')
-        plt.title('Diversity')
-        plt.xlabel('Epoch')
-        plt.legend()
-        plt.grid(True)
+        # Ensure we don't exceed the available data
+        if epochs_evaluated:
+            max_plots = min(len(epochs_evaluated), len(training_history['quality_metrics']['sigma_smoothness']))
+            epochs_evaluated = epochs_evaluated[:max_plots]
+            
+            plt.subplot(3, 3, 6)
+            plt.plot(epochs_evaluated, training_history['quality_metrics']['sigma_smoothness'][:max_plots], label='σ')
+            plt.plot(epochs_evaluated, training_history['quality_metrics']['mu_smoothness'][:max_plots], label='μ')
+            plt.title('Smoothness')
+            plt.xlabel('Epoch')
+            plt.legend()
+            plt.grid(True)
+            
+            plt.subplot(3, 3, 7)
+            plt.plot(epochs_evaluated, training_history['quality_metrics']['sigma_diversity'][:max_plots], label='σ')
+            plt.plot(epochs_evaluated, training_history['quality_metrics']['mu_diversity'][:max_plots], label='μ')
+            plt.title('Diversity')
+            plt.xlabel('Epoch')
+            plt.legend()
+            plt.grid(True)
     
     plt.tight_layout()
     plt.savefig(f'{output_dir}/training_curves.png', dpi=150)

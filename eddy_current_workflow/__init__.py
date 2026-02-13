@@ -20,6 +20,7 @@ from . import forward
 from . import inverse
 from . import database
 from . import pipelines
+from . import quality
 
 __all__ = [
     'config',
@@ -28,4 +29,5 @@ __all__ = [
     'inverse',
     'database',
     'pipelines',
+    'quality',
 ]
