@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(python scripts/reports/run_latent_space_analysis.py:*)",
+      "Bash(python:*)",
+      "Bash(./models/runpod/launch_improved_wgan_experiments.sh:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

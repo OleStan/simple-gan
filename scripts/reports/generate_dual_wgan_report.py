@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 from datetime import datetime
 
-from wgan_dual_profiles import DualHeadGenerator
+from models.dual_wgan.model import DualHeadGenerator
 
 
 def load_trained_model(model_dir, device):
@@ -18,7 +18,14 @@ def load_trained_model(model_dir, device):
         norm_params = json.load(f)
     
     K = norm_params['K']
-    nz = 100
+
+    config_path = Path(f'{model_dir}/config.json')
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            model_config = json.load(f)
+        nz = model_config.get('nz', 100)
+    else:
+        nz = 100
     
     netG = DualHeadGenerator(nz=nz, K=K).to(device)
     
@@ -27,16 +34,17 @@ def load_trained_model(model_dir, device):
         model_path = final_path
         epoch_label = "final"
     else:
-        model_files = sorted(Path(f'{model_dir}/models').glob('netG_epoch_*.pth'))
+        model_files = list(Path(f'{model_dir}/models').glob('netG_epoch_*.pth'))
         if not model_files:
             raise FileNotFoundError(f"No generator checkpoints found in {model_dir}/models/")
+        model_files.sort(key=lambda p: int(p.stem.replace('netG_epoch_', '')))
         model_path = str(model_files[-1])
         epoch_label = model_files[-1].stem.replace('netG_epoch_', '')
     
     netG.load_state_dict(torch.load(model_path, map_location=device))
     netG.eval()
     
-    return netG, norm_params, epoch_label
+    return netG, norm_params, epoch_label, nz
 
 
 def denormalize_profiles(data, norm_params, K):
@@ -291,13 +299,13 @@ def generate_report(model_dir, n_samples=1000):
     print(f"Model directory: {model_dir}")
     print(f"Device: {device}")
     
-    netG, norm_params, epoch_label = load_trained_model(model_dir, device)
+    netG, norm_params, epoch_label, nz = load_trained_model(model_dir, device)
     K = norm_params['K']
     
-    print(f"\n✓ Model loaded from epoch {epoch_label} (K={K} layers)")
+    print(f"\n✓ Model loaded from epoch {epoch_label} (K={K} layers, nz={nz})")
     
     print(f"\nGenerating {n_samples} samples...")
-    sigma_gen, mu_gen, _ = generate_samples(netG, n_samples, 100, device, norm_params, K)
+    sigma_gen, mu_gen, _ = generate_samples(netG, n_samples, nz, device, norm_params, K)
     
     print(f"✓ Generated samples:")
     print(f"  σ: [{sigma_gen.min():.2e}, {sigma_gen.max():.2e}] S/m")

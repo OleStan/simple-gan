@@ -1,0 +1,11 @@
+{
+  "nz": 100,
+  "K": 51,
+  "batch_size": 256,
+  "num_workers": 4,
+  "n_epochs": 500,
+  "lr": 0.0001,
+  "n_critic": 5,
+  "lambda_gp": 10,
+  "optimizations": "AMP + large_batch + multi_worker + pin_memory"
+}

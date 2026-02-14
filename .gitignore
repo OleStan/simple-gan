@@ -31,10 +31,24 @@ training_data_archive_*/
 # Model results and checkpoints
 models/*/results/
 models/*/checkpoints/
-*.pth
-*.pt
 *.ckpt
 *.pkl
+
+# Results: ignore epoch checkpoints but keep final models
+results/**/models/netG_epoch_*.pth
+results/**/models/netC_epoch_*.pth
+results/**/models/netG_epoch_*.pt
+results/**/models/netC_epoch_*.pt
+!results/**/models/*_final.pth
+!results/**/models/*_final.pt
+
+# Results: ignore training images, report images, and generated .npy
+results/**/training_images/
+results/**/report_*/*.png
+results/**/report_*/generated_*.npy
+results/**/quality_report/plots/
+results/**/training_curves.png
+results/**/*.png
 
 # Training outputs
 results/experiments/*

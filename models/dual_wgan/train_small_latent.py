@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from torch.utils.data import Dataset, DataLoader
 
-from wgan_dual_profiles import DualHeadGenerator, Critic, weights_init, compute_gradient_penalty
+from models.dual_wgan.model import DualHeadGenerator, Critic, weights_init, compute_gradient_penalty
 
 
 class ProfileDataset(Dataset):

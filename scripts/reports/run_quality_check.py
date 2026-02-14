@@ -25,6 +25,12 @@ def load_dual_wgan_generator(model_dir: str, nz: int, K: int, device: torch.devi
     model_path = Path(model_dir) / 'models' / 'netG_final.pth'
     if not model_path.exists():
         model_path = Path(model_dir) / 'models' / 'netG_final.pt'
+    if not model_path.exists():
+        epoch_files = list(Path(model_dir).glob('models/netG_epoch_*.pth'))
+        if not epoch_files:
+            raise FileNotFoundError(f"No generator checkpoints found in {model_dir}/models/")
+        epoch_files.sort(key=lambda p: int(p.stem.replace('netG_epoch_', '')))
+        model_path = epoch_files[-1]
 
     netG.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
     netG.eval()
