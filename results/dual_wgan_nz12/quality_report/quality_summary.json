@@ -4,16 +4,16 @@
   "criteria": {
     "1_moment_matching": {
       "passed": true,
-      "mean_rel_diff": 0.0980667015814944,
-      "variance_ratio": 1.1629450908093608,
+      "mean_rel_diff": 0.09664766522124206,
+      "variance_ratio": 1.1257380000312243,
       "mode_collapse": false,
       "noise_amplification": false
     },
     "2_distribution_distance": {
-      "wasserstein_mean": 0.03218031756447635,
-      "mmd_score": 0.20063123641371883,
-      "mmd_sigma": 0.0697642219526654,
-      "mmd_mu": 0.13086701446105342
+      "wasserstein_mean": 0.03185737224286595,
+      "mmd_score": 0.20014470277645546,
+      "mmd_sigma": 0.07002663345529281,
+      "mmd_mu": 0.13011806932116265
     },
     "3_latent_traversal": {
       "passed": true,
@@ -31,7 +31,7 @@
     },
     "5_noise_robustness": {
       "passed": true,
-      "mean_lipschitz": 2.1492430329322816
+      "mean_lipschitz": 2.0494433891773225
     }
   }
 }

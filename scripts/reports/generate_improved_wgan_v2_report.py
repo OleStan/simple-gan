@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from wgan_improved_v2 import ConditionalConv1DGenerator
+from models.improved_wgan_v2.model import ConditionalConv1DGenerator
 
 def main():
     if len(sys.argv) < 2:
@@ -27,9 +27,17 @@ def main():
     
     with open(model_dir / 'normalization_params.json', 'r') as f:
         norm_params = json.load(f)
-    
+
     K = norm_params['K']
-    nz = 100
+
+    # Load nz from config.json
+    config_path = model_dir / 'config.json'
+    if config_path.exists():
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        nz = config.get('nz', 100)
+    else:
+        nz = 100
     
     netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False).to(device)
     

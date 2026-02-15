@@ -1,7 +1,7 @@
 # GAN Quality Validation Report
 
 **Model:** Dual-Head WGAN
-**Date:** 2026-02-14 16:00:47
+**Date:** 2026-02-14 16:42:28
 **Overall Status:** PASS
 **Real samples:** 2000
 **Generated samples:** 1000
@@ -18,10 +18,10 @@ the generator captures the central tendency and spread of the data.
 
 | Metric | Value |
 |--------|-------|
-| Mean absolute difference | 0.019551 |
-| Mean relative difference | 0.0587 (5.87%) |
-| Variance ratio (gen/real) | 0.9887 |
-| Variance absolute difference | 0.002902 |
+| Mean absolute difference | 0.019766 |
+| Mean relative difference | 0.0600 (6.00%) |
+| Variance ratio (gen/real) | 0.9947 |
+| Variance absolute difference | 0.002890 |
 | Mode collapse detected | No |
 | Noise amplification detected | No |
 
@@ -46,9 +46,9 @@ Lower values indicate closer distributions.
 
 | Metric | Value |
 |--------|-------|
-| Mean Wasserstein distance | 0.025974 |
-| σ dimensions mean | 0.027008 |
-| μ dimensions mean | 0.024941 |
+| Mean Wasserstein distance | 0.026281 |
+| σ dimensions mean | 0.027156 |
+| μ dimensions mean | 0.025406 |
 
 ### Maximum Mean Discrepancy (MMD)
 
@@ -56,9 +56,9 @@ Kernel-based distance using Gaussian RBF kernel. MMD² = 0 iff distributions are
 
 | Metric | Value |
 |--------|-------|
-| Total MMD | 0.123045 |
-| σ component | 0.043773 |
-| μ component | 0.079272 |
+| Total MMD | 0.141939 |
+| σ component | 0.042526 |
+| μ component | 0.099414 |
 
 ![Distribution Distances](plots/distribution_distances.png)
 
@@ -111,12 +111,12 @@ output changes. Sudden jumps indicate instability; no change indicates inactive 
 | Valid responses | 20 |
 | NaN responses | 0 |
 | Inf responses | 0 |
-| Mean |Z| | 4.575908e+00 |
-| Std |Z| | 5.486592e+00 |
-| Impedance real range | [-1.236901e+00, 2.615033e-02] |
-| Impedance imag range | [-1.388374e+00, 1.946177e+01] |
+| Mean |Z| | 4.004297e+00 |
+| Std |Z| | 4.395391e+00 |
+| Impedance real range | [-1.193739e+00, -9.263253e-02] |
+| Impedance imag range | [-1.313083e+00, 1.402946e+01] |
 | Reference |Z| (real data) | 3.324762e-01 |
-| Amplitude relative error | 12.7631 (1276.31%) |
+| Amplitude relative error | 11.0439 (1104.39%) |
 
 **Interpretation:**
 - All forward responses should be finite (no NaN/Inf)
@@ -132,15 +132,15 @@ z' = z + ε where ε ~ N(0, σ²I). A robust generator satisfies:
 
 | Noise Level (σ) | Mean Δ Output | Max Δ Output |
 |-----------------|---------------|--------------|
-| 0.010 | 0.018740 | 0.175871 |
-| 0.050 | 0.084176 | 0.440956 |
-| 0.100 | 0.169737 | 1.249712 |
-| 0.200 | 0.331720 | 1.868859 |
-| 0.500 | 0.701462 | 2.225249 |
+| 0.010 | 0.016528 | 0.187501 |
+| 0.050 | 0.087383 | 0.763120 |
+| 0.100 | 0.169344 | 1.268199 |
+| 0.200 | 0.314497 | 1.690939 |
+| 0.500 | 0.697001 | 2.354317 |
 
 | Metric | Value |
 |--------|-------|
-| Mean Lipschitz estimate | 2.2150 |
+| Mean Lipschitz estimate | 2.2297 |
 | Robust (Lipschitz < 10) | Yes |
 
 **Interpretation:**
