@@ -23,6 +23,9 @@ def weights_init(m):
             nn.init.constant_(m.bias.data, 0)
 
 
+_EMBED_DIM = 32
+
+
 class ConditionalConv1DGenerator(nn.Module):
     """
     Improved generator v2 with:
@@ -30,14 +33,18 @@ class ConditionalConv1DGenerator(nn.Module):
     - Optional conditional generation
     - Better architecture for smooth profiles
     """
-    def __init__(self, nz=100, K=50, ngf=256, conditional=False, n_conditions=0):
+    def __init__(self, nz=100, K=50, ngf=256, conditional=False, n_conditions=0, n_classes=1):
         super().__init__()
         self.K = K
         self.ngf = ngf
         self.conditional = conditional
-        
-        input_dim = nz + n_conditions if conditional else nz
-        
+        self.n_classes = n_classes
+
+        embed_dim = _EMBED_DIM if n_classes > 1 else n_conditions
+        input_dim = nz + embed_dim if (conditional or n_classes > 1) else nz
+        if n_classes > 1:
+            self.label_embedding = nn.Embedding(n_classes, _EMBED_DIM)
+
         self.fc = nn.Linear(input_dim, ngf * 4)
         
         self.upsample = nn.Sequential(
@@ -82,8 +89,11 @@ class ConditionalConv1DGenerator(nn.Module):
         
         self.final_adjust = nn.AdaptiveAvgPool1d(K)
     
-    def forward(self, z, conditions=None):
-        if self.conditional and conditions is not None:
+    def forward(self, z, conditions=None, labels=None):
+        if self.n_classes > 1 and labels is not None:
+            emb = self.label_embedding(labels)
+            z = torch.cat([z, emb], dim=1)
+        elif self.conditional and conditions is not None:
             z = torch.cat([z, conditions], dim=1)
         
         x = self.fc(z)
@@ -107,66 +117,71 @@ class SpectralNormConv1DCritic(nn.Module):
     Improved critic v2 with spectral normalization for stability.
     No gradient penalty needed when using spectral norm.
     """
-    def __init__(self, K=50, ndf=128, use_spectral_norm=True):
+    def __init__(self, K=50, ndf=128, use_spectral_norm=True, n_classes=1):
         super().__init__()
         self.K = K
         self.use_spectral_norm = use_spectral_norm
-        
+        self.n_classes = n_classes
+
         def maybe_spectral_norm(layer):
             return spectral_norm(layer) if use_spectral_norm else layer
-        
+
+        if n_classes > 1:
+            self.label_embedding = nn.Embedding(n_classes, _EMBED_DIM)
+
         self.sigma_encoder = nn.Sequential(
             maybe_spectral_norm(nn.Conv1d(1, ndf // 2, 5, 2, 2)),
             nn.LeakyReLU(0.2, inplace=True),
-            
+
             maybe_spectral_norm(nn.Conv1d(ndf // 2, ndf, 5, 2, 2)),
             nn.LeakyReLU(0.2, inplace=True),
-            
+
             maybe_spectral_norm(nn.Conv1d(ndf, ndf, 3, 2, 1)),
             nn.LeakyReLU(0.2, inplace=True)
         )
-        
+
         self.mu_encoder = nn.Sequential(
             maybe_spectral_norm(nn.Conv1d(1, ndf // 2, 5, 2, 2)),
             nn.LeakyReLU(0.2, inplace=True),
-            
+
             maybe_spectral_norm(nn.Conv1d(ndf // 2, ndf, 5, 2, 2)),
             nn.LeakyReLU(0.2, inplace=True),
-            
+
             maybe_spectral_norm(nn.Conv1d(ndf, ndf, 3, 2, 1)),
             nn.LeakyReLU(0.2, inplace=True)
         )
-        
+
         self.joint_processor = nn.Sequential(
             maybe_spectral_norm(nn.Conv1d(ndf * 2, ndf * 2, 3, 1, 1)),
             nn.LeakyReLU(0.2, inplace=True),
             nn.AdaptiveAvgPool1d(1)
         )
-        
+
+        fc_input_dim = ndf * 2 + _EMBED_DIM if n_classes > 1 else ndf * 2
         self.fc = nn.Sequential(
             nn.Flatten(),
-            maybe_spectral_norm(nn.Linear(ndf * 2, 256)),
+            maybe_spectral_norm(nn.Linear(fc_input_dim, 256)),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout(0.2),
             maybe_spectral_norm(nn.Linear(256, 1))
         )
-    
-    def forward(self, x):
-        batch_size = x.size(0)
-        
+
+    def forward(self, x, labels=None):
         sigma = x[:, :self.K].unsqueeze(1)
         mu = x[:, self.K:].unsqueeze(1)
-        
+
         sigma_features = self.sigma_encoder(sigma)
         mu_features = self.mu_encoder(mu)
-        
+
         combined = torch.cat([sigma_features, mu_features], dim=1)
-        
         joint_features = self.joint_processor(combined)
-        
-        output = self.fc(joint_features)
-        
-        return output
+        flat = joint_features.view(joint_features.size(0), -1)
+
+        if self.n_classes > 1 and labels is not None:
+            emb = self.label_embedding(labels)
+            flat = torch.cat([flat, emb], dim=1)
+
+        return self.fc(flat)
 
 
 class PhysicsInformedLossV2(nn.Module):

@@ -29,8 +29,8 @@ def main():
         norm_params = json.load(f)
 
     K = norm_params['K']
+    n_classes = norm_params.get('n_classes', 1)
 
-    # Load nz from config.json
     config_path = model_dir / 'config.json'
     if config_path.exists():
         with open(config_path, 'r') as f:
@@ -38,8 +38,8 @@ def main():
         nz = config.get('nz', 100)
     else:
         nz = 100
-    
-    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False).to(device)
+
+    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False, n_classes=n_classes).to(device)
     
     model_path = model_dir / 'models' / 'netG_final.pt'
     if not model_path.exists():
@@ -55,33 +55,41 @@ def main():
     
     netG.load_state_dict(torch.load(model_path, map_location=device))
     netG.eval()
-    
-    print(f"\n✓ Model loaded from epoch {epoch_num} (K={K} layers)")
-    
+
+    print(f"\n✓ Model loaded from epoch {epoch_num} (K={K} layers, n_classes={n_classes})")
+
     print("\nGenerating 1000 samples...")
     n_samples = 1000
     generated_samples = []
-    
-    with torch.no_grad():
-        for i in range(0, n_samples, 100):
-            batch_size = min(100, n_samples - i)
-            noise = torch.randn(batch_size, nz, device=device)
-            fake_data, sigma_fake, mu_fake = netG(noise)
-            generated_samples.append(fake_data.cpu().numpy())
-    
-    generated_samples = np.vstack(generated_samples)
-    
-    sigma_generated = generated_samples[:, :K]
-    mu_generated = generated_samples[:, K:2*K]
-    
+    gen_labels_list = []
+
     sigma_min = norm_params['sigma_min']
     sigma_max = norm_params['sigma_max']
     mu_min = norm_params['mu_min']
     mu_max = norm_params['mu_max']
-    
+
+    with torch.no_grad():
+        for i in range(0, n_samples, 100):
+            batch_size = min(100, n_samples - i)
+            noise = torch.randn(batch_size, nz, device=device)
+            if n_classes > 1:
+                batch_labels = torch.arange(batch_size, device=device) % n_classes
+                fake_data, _, _ = netG(noise, labels=batch_labels)
+                gen_labels_list.append(batch_labels.cpu().numpy())
+            else:
+                fake_data, _, _ = netG(noise)
+                gen_labels_list.append(np.zeros(batch_size, dtype=np.int64))
+            generated_samples.append(fake_data.cpu().numpy())
+
+    generated_samples = np.vstack(generated_samples)
+    gen_labels = np.concatenate(gen_labels_list)
+
+    sigma_generated = generated_samples[:, :K]
+    mu_generated = generated_samples[:, K:2*K]
+
     sigma_denorm = (sigma_generated + 1) / 2 * (sigma_max - sigma_min) + sigma_min
     mu_denorm = (mu_generated + 1) / 2 * (mu_max - mu_min) + mu_min
-    
+
     print(f"✓ Generated samples:")
     print(f"  σ: [{sigma_denorm.min():.2e}, {sigma_denorm.max():.2e}] S/m")
     print(f"  μ: [{mu_denorm.min():.2f}, {mu_denorm.max():.2f}]")
@@ -91,32 +99,36 @@ def main():
     
     print("\nGenerating visualizations...")
     
-    print("  1/5 Sample profiles...")
+    n_plots = 6 if n_classes > 1 else 5
+    print(f"  1/{n_plots} Sample profiles...")
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     fig.suptitle('Improved WGAN v2 - Generated Profile Samples', fontsize=16, fontweight='bold')
-    
+
     for i in range(6):
         row = i // 3
         col = i % 3
         ax = axes[row, col]
-        
+
         ax.plot(sigma_denorm[i], label='σ', linewidth=2, alpha=0.8)
         ax2 = ax.twinx()
         ax2.plot(mu_denorm[i], label='μ', color='orange', linewidth=2, alpha=0.8)
-        
+
         ax.set_xlabel('Layer Index')
         ax.set_ylabel('σ (S/m)', color='blue')
         ax2.set_ylabel('μ (relative)', color='orange')
-        ax.set_title(f'Sample {i+1}')
+        title = f'Sample {i+1}'
+        if n_classes > 1:
+            title += f' (Class {gen_labels[i]})'
+        ax.set_title(title)
         ax.grid(True, alpha=0.3)
         ax.tick_params(axis='y', labelcolor='blue')
         ax2.tick_params(axis='y', labelcolor='orange')
-    
+
     plt.tight_layout()
     plt.savefig(output_dir / 'sample_profiles.png', dpi=150, bbox_inches='tight')
     plt.close()
     
-    print("  2/5 Distribution comparison...")
+    print(f"  2/{n_plots} Distribution comparison...")
     real_data = np.load('training_data/X_raw.npy')
     sigma_real = real_data[:, :K]
     mu_real = real_data[:, K:2*K]
@@ -176,7 +188,7 @@ def main():
     plt.savefig(output_dir / 'distribution_comparison.png', dpi=150, bbox_inches='tight')
     plt.close()
     
-    print("  3/5 Training curves...")
+    print(f"  3/{n_plots} Training curves...")
     with open(model_dir / 'training_history.json', 'r') as f:
         history = json.load(f)
     
@@ -211,7 +223,7 @@ def main():
     axes[1, 1].set_xlabel('Epoch')
     axes[1, 1].grid(True, alpha=0.3)
     
-    if history['quality_metrics']['sigma_smoothness']:
+    if history.get('quality_metrics', {}).get('sigma_smoothness'):
         epochs_eval = list(range(0, len(history['loss_C']), 10))
         axes[1, 2].plot(epochs_eval, history['quality_metrics']['sigma_smoothness'], label='σ', marker='o')
         axes[1, 2].plot(epochs_eval, history['quality_metrics']['mu_smoothness'], label='μ', marker='s')
@@ -243,30 +255,33 @@ def main():
     plt.savefig(output_dir / 'training_curves.png', dpi=150, bbox_inches='tight')
     plt.close()
     
-    print("  4/5 Normalized profiles...")
+    print(f"  4/{n_plots} Normalized profiles...")
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     fig.suptitle('Normalized Profile Samples', fontsize=16, fontweight='bold')
-    
+
     for i in range(6):
         row = i // 3
         col = i % 3
         ax = axes[row, col]
-        
+
         ax.plot(sigma_generated[i], label='σ (norm)', linewidth=2, alpha=0.8)
         ax.plot(mu_generated[i], label='μ (norm)', linewidth=2, alpha=0.8)
         ax.set_xlabel('Layer Index')
         ax.set_ylabel('Normalized Value')
-        ax.set_title(f'Sample {i+1}')
+        title = f'Sample {i+1}'
+        if n_classes > 1:
+            title += f' (Class {gen_labels[i]})'
+        ax.set_title(title)
         ax.legend()
         ax.grid(True, alpha=0.3)
         ax.set_ylim(-1.2, 1.2)
         ax.axhline(y=0, color='k', linestyle='--', alpha=0.3)
-    
+
     plt.tight_layout()
     plt.savefig(output_dir / 'normalized_profiles.png', dpi=150, bbox_inches='tight')
     plt.close()
-    
-    print("  5/5 Quality analysis...")
+
+    print(f"  5/{n_plots} Quality analysis...")
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     fig.suptitle('Generated Profile Quality Analysis', fontsize=16, fontweight='bold')
     
@@ -301,11 +316,51 @@ def main():
     plt.savefig(output_dir / 'quality_analysis.png', dpi=150, bbox_inches='tight')
     plt.close()
     
+    if n_classes > 1:
+        print(f"  6/{n_plots} Per-class distribution comparison...")
+        colors = ['steelblue', 'darkorange', 'forestgreen', 'crimson']
+        real_labels_path = Path('training_data/y_labels.npy')
+        if real_labels_path.exists():
+            real_labels_arr = np.load(real_labels_path).astype(np.int64)
+        else:
+            real_labels_arr = np.zeros(len(real_data), dtype=np.int64)
+
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        for cls in range(n_classes):
+            c = colors[cls % len(colors)]
+            r_mask = real_labels_arr == cls
+            g_mask = gen_labels == cls
+            if r_mask.sum() > 0:
+                axes[0, 0].plot(real_data[r_mask, :K].mean(axis=0), color=c, linewidth=2, label=f'Real Class {cls}')
+                axes[0, 1].plot(real_data[r_mask, K:2*K].mean(axis=0), color=c, linewidth=2, label=f'Real Class {cls}')
+            if g_mask.sum() > 0:
+                axes[1, 0].plot(sigma_denorm[g_mask].mean(axis=0), color=c, linewidth=2, linestyle='--', label=f'Gen Class {cls}')
+                axes[1, 1].plot(mu_denorm[g_mask].mean(axis=0), color=c, linewidth=2, linestyle='--', label=f'Gen Class {cls}')
+
+        for ax, title, ylabel in zip(
+            [axes[0, 0], axes[0, 1], axes[1, 0], axes[1, 1]],
+            ['Real σ per Class', 'Real μ per Class', 'Generated σ per Class', 'Generated μ per Class'],
+            ['σ (S/m)', 'μᵣ', 'σ (S/m)', 'μᵣ'],
+        ):
+            ax.set_title(title, fontsize=12, fontweight='bold')
+            ax.set_xlabel('Layer Index', fontsize=10)
+            ax.set_ylabel(ylabel, fontsize=10)
+            ax.legend(fontsize=9)
+            ax.grid(True, alpha=0.3)
+
+        plt.suptitle('Per-Class Distribution Comparison', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.savefig(output_dir / 'per_class_distributions.png', dpi=150, bbox_inches='tight')
+        plt.close()
+
     np.save(output_dir / 'generated_sigma.npy', sigma_denorm)
     np.save(output_dir / 'generated_mu.npy', mu_denorm)
-    
+    if n_classes > 1:
+        np.save(output_dir / 'generated_labels.npy', gen_labels)
+
     stats = {
         'n_samples': int(n_samples),
+        'n_classes': n_classes,
         'sigma': {
             'min': float(sigma_denorm.min()),
             'max': float(sigma_denorm.max()),
@@ -324,10 +379,20 @@ def main():
             'wasserstein_distance': float(history['wasserstein_distance'][-1])
         }
     }
-    
+
+    if n_classes > 1:
+        stats['per_class'] = {}
+        for cls in range(n_classes):
+            mask = gen_labels == cls
+            stats['per_class'][str(cls)] = {
+                'sigma_mean': float(sigma_denorm[mask].mean()) if mask.sum() > 0 else 0.0,
+                'mu_mean': float(mu_denorm[mask].mean()) if mask.sum() > 0 else 0.0,
+                'n_samples': int(mask.sum()),
+            }
+
     with open(output_dir / 'generation_stats.json', 'w') as f:
         json.dump(stats, f, indent=2)
-    
+
     print("\n" + "="*60)
     print("Report Generation Complete!")
     print("="*60)
@@ -337,6 +402,8 @@ def main():
     print("  - training_curves.png")
     print("  - normalized_profiles.png")
     print("  - quality_analysis.png")
+    if n_classes > 1:
+        print("  - per_class_distributions.png")
     print(f"  - generated_sigma.npy ({sigma_denorm.shape})")
     print(f"  - generated_mu.npy ({mu_denorm.shape})")
     print("  - generation_stats.json")

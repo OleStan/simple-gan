@@ -4,6 +4,7 @@ Train dual-head WGAN with configurable latent space size.
 Usage: python train_latent_experiment.py --nz 32 --epochs 500
 """
 
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -33,6 +34,12 @@ class ProfileDataset(Dataset):
         self.mu_min = self.norm_params['mu_min']
         self.mu_max = self.norm_params['mu_max']
 
+        labels_path = Path(data_path).parent / 'y_labels.npy'
+        if labels_path.exists():
+            self.labels = np.load(labels_path).astype(np.int64)
+        else:
+            self.labels = np.zeros(len(self.data), dtype=np.int64)
+
         self.normalized_data = self._normalize(self.data)
 
     def _normalize(self, data):
@@ -48,7 +55,7 @@ class ProfileDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.FloatTensor(self.normalized_data[idx])
+        return torch.FloatTensor(self.normalized_data[idx]), self.labels[idx]
 
 
 def denormalize_profiles(data, norm_params, K):
@@ -70,9 +77,9 @@ def main():
     parser = argparse.ArgumentParser(description='Train Dual WGAN with configurable latent space')
     parser.add_argument('--nz', type=int, default=32, help='Latent space dimension')
     parser.add_argument('--epochs', type=int, default=500, help='Number of epochs')
-    parser.add_argument('--batch_size', type=int, default=256, help='Batch size')
+    parser.add_argument('--batch_size', type=int, default=2048, help='Batch size')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('--num_workers', type=int, default=4, help='Number of data loading workers')
+    parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
     parser.add_argument('--save_interval', type=int, default=50, help='Save model every N epochs')
     parser.add_argument('--image_interval', type=int, default=10, help='Generate images every N epochs')
     args = parser.parse_args()
@@ -93,15 +100,18 @@ def main():
         norm_params = json.load(f)
 
     K = norm_params['K']
+    n_classes = norm_params.get('n_classes', 1)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path(f'../../results/dual_wgan_nz{args.nz}_{timestamp}')
+    result_tag = os.environ.get('RESULT_TAG', 'two_classes')
+    class_tag = f'nc{n_classes}' if n_classes > 1 else 'nc1'
+    output_dir = Path(f'../../results/{result_tag}/dual_wgan_nz{args.nz}_{class_tag}_{timestamp}')
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / 'models').mkdir(exist_ok=True)
     (output_dir / 'training_images').mkdir(exist_ok=True)
 
     dataset = ProfileDataset('../../data/training/X_raw.npy',
-                            '../../data/training/normalization_params.json')
+                             '../../data/training/normalization_params.json')
 
     dataloader = DataLoader(
         dataset,
@@ -120,8 +130,8 @@ def main():
     print(f"  Samples: {len(dataset)}")
     print(f"  Output dim: {2*K}")
 
-    netG = DualHeadGenerator(nz=args.nz, K=K).to(device)
-    netC = Critic(input_dim=2*K).to(device)
+    netG = DualHeadGenerator(nz=args.nz, K=K, n_classes=n_classes).to(device)
+    netC = Critic(input_dim=2*K, n_classes=n_classes).to(device)
 
     netG.apply(weights_init)
     netC.apply(weights_init)
@@ -155,6 +165,7 @@ def main():
         'lr': args.lr,
         'n_critic': 5,
         'lambda_gp': 10,
+        'n_classes': n_classes,
         'optimizations': 'AMP + large_batch + multi_worker + pin_memory',
         'experiment': f'latent_space_nz{args.nz}',
     }
@@ -179,9 +190,14 @@ def main():
     for epoch in range(args.epochs):
         epoch_start = time.time()
 
-        for i, real_data in enumerate(dataloader):
+        for i, (real_data, real_labels) in enumerate(dataloader):
             real_data = real_data.to(device, non_blocking=True)
+            real_labels = real_labels.to(device, non_blocking=True)
             batch_size_current = real_data.size(0)
+
+            gen_labels = None
+            if n_classes > 1:
+                gen_labels = torch.randint(0, n_classes, (batch_size_current,), device=device)
 
             # Train Critic
             for _ in range(n_critic):
@@ -189,12 +205,13 @@ def main():
 
                 with autocast():
                     noise = torch.randn(batch_size_current, args.nz, device=device)
-                    fake_data, _, _ = netG(noise)
+                    fake_data, _, _ = netG(noise, gen_labels)
 
-                    critic_real = netC(real_data)
-                    critic_fake = netC(fake_data.detach())
+                    critic_real = netC(real_data, real_labels if n_classes > 1 else None)
+                    critic_fake = netC(fake_data.detach(), gen_labels)
 
-                    gp = compute_gradient_penalty(netC, real_data, fake_data.detach(), device)
+                    gp = compute_gradient_penalty(netC, real_data, fake_data.detach(), device,
+                                                  labels=real_labels if n_classes > 1 else None)
 
                     loss_C = -torch.mean(critic_real) + torch.mean(critic_fake) + lambda_gp * gp
 
@@ -207,9 +224,9 @@ def main():
 
             with autocast():
                 noise = torch.randn(batch_size_current, args.nz, device=device)
-                fake_data, _, _ = netG(noise)
+                fake_data, _, _ = netG(noise, gen_labels)
 
-                critic_fake = netC(fake_data)
+                critic_fake = netC(fake_data, gen_labels)
                 loss_G = -torch.mean(critic_fake)
 
             scaler.scale(loss_G).backward()
@@ -242,7 +259,10 @@ def main():
         if (epoch + 1) % args.image_interval == 0:
             with torch.no_grad():
                 noise = torch.randn(16, args.nz, device=device)
-                fake_data, fake_sigma, fake_mu = netG(noise)
+                vis_labels = None
+                if n_classes > 1:
+                    vis_labels = torch.arange(16, device=device) % n_classes
+                fake_data, fake_sigma, fake_mu = netG(noise, vis_labels)
                 fake_data_np = fake_data.cpu().numpy()
 
                 sigma_denorm, mu_denorm = denormalize_profiles(fake_data_np, norm_params, K)

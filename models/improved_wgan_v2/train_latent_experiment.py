@@ -34,16 +34,22 @@ class ProfileDataset(torch.utils.data.Dataset):
         self.K = self.norm_params['K']
         self.normalize = normalize
 
+        labels_path = Path(data_path).parent / 'y_labels.npy'
+        if labels_path.exists():
+            self.labels = np.load(labels_path).astype(np.int64)
+        else:
+            self.labels = np.zeros(len(self.X), dtype=np.int64)
+
         if normalize:
             self.X_normalized = self.X.copy()
 
             sigma_data = self.X[:, :self.K]
             mu_data = self.X[:, self.K:2*self.K]
 
-            sigma_min = sigma_data.min()
-            sigma_max = sigma_data.max()
-            mu_min = mu_data.min()
-            mu_max = mu_data.max()
+            sigma_min = self.norm_params['sigma_min']
+            sigma_max = self.norm_params['sigma_max']
+            mu_min = self.norm_params['mu_min']
+            mu_max = self.norm_params['mu_max']
 
             self.X_normalized[:, :self.K] = 2 * (sigma_data - sigma_min) / (sigma_max - sigma_min) - 1
             self.X_normalized[:, self.K:2*self.K] = 2 * (mu_data - mu_min) / (mu_max - mu_min) - 1
@@ -56,17 +62,17 @@ class ProfileDataset(torch.utils.data.Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.FloatTensor(self.data[idx])
+        return torch.FloatTensor(self.data[idx]), self.labels[idx]
 
 
 def main():
     parser = argparse.ArgumentParser(description='Train Improved WGAN v2 with configurable latent space')
     parser.add_argument('--nz', type=int, default=100, help='Latent space dimension')
     parser.add_argument('--epochs', type=int, default=500, help='Number of epochs')
-    parser.add_argument('--batch_size', type=int, default=256, help='Batch size')
+    parser.add_argument('--batch_size', type=int, default=2048, help='Batch size')
     parser.add_argument('--lr_g', type=float, default=5e-5, help='Generator learning rate')
     parser.add_argument('--lr_c', type=float, default=2e-4, help='Critic learning rate')
-    parser.add_argument('--num_workers', type=int, default=4, help='Number of data loading workers')
+    parser.add_argument('--num_workers', type=int, default=8, help='Number of data loading workers')
     args = parser.parse_args()
 
     # Training hyperparameters
@@ -103,10 +109,13 @@ def main():
     with open('../../data/training/normalization_params.json', 'r') as f:
         norm_params_temp = json.load(f)
     K = norm_params_temp['K']
+    n_classes = norm_params_temp.get('n_classes', 1)
 
     # Create output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = f'../../results/improved_wgan_v2_nz{nz}_{timestamp}'
+    result_tag = os.environ.get('RESULT_TAG', 'two_classes')
+    class_tag = f'nc{n_classes}' if n_classes > 1 else 'nc1'
+    output_dir = f'../../results/{result_tag}/improved_wgan_v2_nz{nz}_{class_tag}_{timestamp}'
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(f'{output_dir}/models', exist_ok=True)
     os.makedirs(f'{output_dir}/training_images', exist_ok=True)
@@ -123,21 +132,25 @@ def main():
     dataset = ProfileDataset('../../data/training/X_raw.npy', normalize=True)
     print(f"  Samples: {len(dataset)}")
 
+    effective_batch = min(batch_size, len(dataset))
+    if effective_batch != batch_size:
+        print(f"  NOTE: batch_size capped to dataset size ({effective_batch})")
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=batch_size,
+        batch_size=effective_batch,
         shuffle=True,
         num_workers=num_workers,
         pin_memory=True,
         persistent_workers=True if num_workers > 0 else False,
-        drop_last=True
+        drop_last=False
     )
 
     # Initialize models
-    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False).to(device)
+    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=(n_classes > 1), n_classes=n_classes).to(device)
     netG.apply(weights_init)
 
-    netC = SpectralNormConv1DCritic(K=K, use_spectral_norm=use_spectral_norm).to(device)
+    netC = SpectralNormConv1DCritic(K=K, use_spectral_norm=use_spectral_norm, n_classes=n_classes).to(device)
     if not use_spectral_norm:
         netC.apply(weights_init)
 
@@ -188,7 +201,8 @@ def main():
         'lambda_physics_end': lambda_physics_end,
         'physics_warmup_epochs': physics_warmup_epochs,
         'device': str(device),
-        'num_workers': num_workers
+        'num_workers': num_workers,
+        'n_classes': n_classes
     }
 
     with open(f'{output_dir}/config.json', 'w') as f:
@@ -223,25 +237,31 @@ def main():
 
         epoch_start = time.time()
 
-        for i, real_data in enumerate(dataloader):
+        for i, (real_data, real_labels) in enumerate(dataloader):
             real_data = real_data.to(device, non_blocking=True)
+            real_labels = real_labels.to(device, non_blocking=True)
             batch_size_current = real_data.size(0)
+
+            gen_labels = None
+            if n_classes > 1:
+                gen_labels = torch.randint(0, n_classes, (batch_size_current,), device=device)
 
             # Train Critic
             for _ in range(n_critic):
                 netC.zero_grad()
 
                 with autocast():
-                    output_real = netC(real_data)
+                    output_real = netC(real_data, labels=real_labels if n_classes > 1 else None)
 
                     noise = torch.randn(batch_size_current, nz, device=device)
-                    fake_data, _, _ = netG(noise)
-                    output_fake = netC(fake_data.detach())
+                    fake_data, _, _ = netG(noise, labels=gen_labels)
+                    output_fake = netC(fake_data.detach(), labels=gen_labels)
 
                     critic_loss = output_fake.mean() - output_real.mean()
 
                     if use_gradient_penalty:
-                        gp = compute_gradient_penalty(netC, real_data, fake_data.detach(), device, lambda_gp)
+                        gp = compute_gradient_penalty(netC, real_data, fake_data.detach(), device, lambda_gp,
+                                                      labels=real_labels if n_classes > 1 else None)
                         critic_loss += gp
                         gradient_penalty_val = gp.item()
                     else:
@@ -257,9 +277,9 @@ def main():
 
             with autocast():
                 noise = torch.randn(batch_size_current, nz, device=device)
-                fake_data, sigma_fake, mu_fake = netG(noise)
+                fake_data, sigma_fake, mu_fake = netG(noise, labels=gen_labels)
 
-                output_fake = netC(fake_data)
+                output_fake = netC(fake_data, labels=gen_labels)
                 g_loss_adv = -output_fake.mean()
 
                 physics_loss, _ = physics_loss_fn(sigma_fake, mu_fake, epoch=epoch, max_epochs=epoch_num)
@@ -282,20 +302,24 @@ def main():
 
         epoch_time = time.time() - epoch_start
 
-        # Save history
-        training_history['loss_C'].append(float(critic_loss.item()))
-        training_history['loss_G'].append(float(g_loss.item()))
-        training_history['loss_G_adv'].append(float(g_loss_adv.item()))
-        training_history['loss_G_physics'].append(float(physics_loss.item()))
-        training_history['wasserstein_distance'].append(float(wasserstein_distance))
-        training_history['gradient_penalty'].append(float(gradient_penalty_val))
-        training_history['physics_weight'].append(float(lambda_physics))
+        # Save history (guard against empty dataloader)
+        if 'critic_loss' in dir():
+            training_history['loss_C'].append(float(critic_loss.item()))
+            training_history['loss_G'].append(float(g_loss.item()))
+            training_history['loss_G_adv'].append(float(g_loss_adv.item()))
+            training_history['loss_G_physics'].append(float(physics_loss.item()))
+            training_history['wasserstein_distance'].append(float(wasserstein_distance))
+            training_history['gradient_penalty'].append(float(gradient_penalty_val))
+            training_history['physics_weight'].append(float(lambda_physics))
 
         # Periodic visualization
         if epoch % 100 == 0:
             netG.eval()
             with torch.no_grad():
-                test_fake, test_sigma, test_mu = netG(fixed_noise)
+                vis_labels = None
+                if n_classes > 1:
+                    vis_labels = torch.arange(16, device=device) % n_classes
+                test_fake, test_sigma, test_mu = netG(fixed_noise, labels=vis_labels)
                 test_sigma_np = test_sigma.cpu().numpy()
                 test_mu_np = test_mu.cpu().numpy()
 

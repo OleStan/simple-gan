@@ -10,8 +10,8 @@ Implements criteria from GAN_Quality_Guide.md sections 2.1 and 2.2:
 
 import numpy as np
 from scipy.stats import wasserstein_distance as scipy_wasserstein
-from dataclasses import dataclass
-from typing import Tuple
+from dataclasses import dataclass, field
+from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -165,4 +165,103 @@ def compute_distribution_distances(
         mmd_score=mmd_total,
         mmd_sigma_component=mmd_sigma,
         mmd_mu_component=mmd_mu,
+    )
+
+
+@dataclass
+class ClassSeparationResult:
+    n_classes: int
+    per_class_real_moments: List[Dict[str, float]]
+    per_class_gen_moments: List[Dict[str, float]]
+    inter_class_wasserstein_real: float
+    inter_class_wasserstein_gen: float
+    separation_ratio: float
+    passed: bool
+
+
+def compute_class_separation(
+    real_data: np.ndarray,
+    generated_data: np.ndarray,
+    real_labels: np.ndarray,
+    gen_labels: np.ndarray,
+    K: int,
+    min_separation_ratio: float = 0.5,
+) -> ClassSeparationResult:
+    """
+    Measure how well the generator separates classes.
+
+    separation_ratio = inter_class_wasserstein_gen / inter_class_wasserstein_real
+    A value >= min_separation_ratio means the generator preserves class structure.
+    """
+    classes = np.unique(real_labels)
+    n_classes = len(classes)
+
+    def _class_sigma_mean(data: np.ndarray, labels: np.ndarray, cls: int) -> np.ndarray:
+        mask = labels == cls
+        return data[mask, :K].mean(axis=0) if mask.sum() > 0 else np.zeros(K)
+
+    per_class_real_moments: List[Dict[str, float]] = []
+    per_class_gen_moments: List[Dict[str, float]] = []
+
+    class_real_means = []
+    class_gen_means = []
+
+    for cls in classes:
+        real_mask = real_labels == cls
+        gen_mask = gen_labels == cls
+
+        r_sigma = real_data[real_mask, :K] if real_mask.sum() > 0 else np.zeros((1, K))
+        r_mu = real_data[real_mask, K:2*K] if real_mask.sum() > 0 else np.zeros((1, K))
+        g_sigma = generated_data[gen_mask, :K] if gen_mask.sum() > 0 else np.zeros((1, K))
+        g_mu = generated_data[gen_mask, K:2*K] if gen_mask.sum() > 0 else np.zeros((1, K))
+
+        per_class_real_moments.append({
+            'sigma_mean': float(r_sigma.mean()),
+            'sigma_std': float(r_sigma.std()),
+            'mu_mean': float(r_mu.mean()),
+            'mu_std': float(r_mu.std()),
+            'n_samples': int(real_mask.sum()),
+        })
+        per_class_gen_moments.append({
+            'sigma_mean': float(g_sigma.mean()),
+            'sigma_std': float(g_sigma.std()),
+            'mu_mean': float(g_mu.mean()),
+            'mu_std': float(g_mu.std()),
+            'n_samples': int(gen_mask.sum()),
+        })
+
+        class_real_means.append(np.concatenate([r_sigma.mean(axis=0), r_mu.mean(axis=0)]))
+        class_gen_means.append(np.concatenate([g_sigma.mean(axis=0), g_mu.mean(axis=0)]))
+
+    if n_classes < 2:
+        return ClassSeparationResult(
+            n_classes=n_classes,
+            per_class_real_moments=per_class_real_moments,
+            per_class_gen_moments=per_class_gen_moments,
+            inter_class_wasserstein_real=0.0,
+            inter_class_wasserstein_gen=0.0,
+            separation_ratio=1.0,
+            passed=True,
+        )
+
+    real_w = float(np.mean([
+        scipy_wasserstein(class_real_means[i], class_real_means[j])
+        for i in range(n_classes) for j in range(i + 1, n_classes)
+    ]))
+    gen_w = float(np.mean([
+        scipy_wasserstein(class_gen_means[i], class_gen_means[j])
+        for i in range(n_classes) for j in range(i + 1, n_classes)
+    ]))
+
+    separation_ratio = gen_w / (real_w + 1e-10)
+    passed = separation_ratio >= min_separation_ratio
+
+    return ClassSeparationResult(
+        n_classes=n_classes,
+        per_class_real_moments=per_class_real_moments,
+        per_class_gen_moments=per_class_gen_moments,
+        inter_class_wasserstein_real=real_w,
+        inter_class_wasserstein_gen=gen_w,
+        separation_ratio=float(separation_ratio),
+        passed=passed,
     )

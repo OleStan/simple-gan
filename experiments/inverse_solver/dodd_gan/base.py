@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import torch
@@ -24,8 +25,10 @@ from scipy.optimize import minimize
 ROOT = Path(__file__).parents[3]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "models" / "improved_wgan_v2"))
+sys.path.insert(0, str(ROOT / "experiments" / "inverse_solver"))
 
 from dodd_forward import DoddProbeSettings, DoddResponse, dodd_forward, PROBE_DEFAULT
+from optimization_utils import run_single_restart_dodd
 
 MODEL_DIR = ROOT / "results" / "improved_wgan_v2_nz32_20260214_140817"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -199,10 +202,7 @@ class GANDoddExperiment(ABC):
     def optimize(self, target_response: DoddResponse, verbose: bool = True) -> GANDoddResult:
         """
         Multi-restart L-BFGS-B in latent space z ∈ ℝ³².
-
-        Warm-start: cheap GAN-space screening (no forward calls).
-        Optimization: L-BFGS-B with finite-difference gradients at integ_range_opt.
-        Verification: final mismatch evaluated at integ_range_verify.
+        Parallelized across restarts using ProcessPoolExecutor.
         """
         rng = np.random.default_rng(self.seed)
         target = target_response.impedance_complex
@@ -225,22 +225,34 @@ class GANDoddExperiment(ABC):
 
         z0_list = self._warm_start_candidates(rng, n_screen)
 
-        for restart, z0 in enumerate(z0_list):
-            opt = minimize(
-                self._objective,
-                z0,
-                args=(target, scale),
-                method="L-BFGS-B",
-                options={
-                    "maxiter": self.n_iter,
-                    "ftol": 1e-15,
-                    "gtol": 1e-10,
-                    "eps": self.fd_epsilon,
-                },
-            )
+        # Build worker configuration
+        config = {
+            'root_dir': str(ROOT),
+            'model_path': str(MODEL_DIR / "models" / "netG_final.pt"),
+            'norm': self.norm,
+            'nz': NZ,
+            'K': K,
+            'use_cuda': False, # Avoid CUDA issues in subprocesses
+            'probe': self.probe,
+            'layer_thickness': LAYER_THICKNESS,
+            'integ_range_opt': self.integ_range_opt,
+            'n_iter': self.n_iter,
+            'fd_epsilon': self.fd_epsilon,
+        }
 
-            z_opt = opt.x.astype(np.float32)
-            sigma, mu = self._decode_z(z_opt)
+        if verbose:
+            print(f"  Running {self.n_restarts} restarts in parallel...")
+
+        with ProcessPoolExecutor() as executor:
+            futures = [
+                executor.submit(run_single_restart_dodd, i, z0, target, scale, config)
+                for i, z0 in enumerate(z0_list)
+            ]
+            results = [f.result() for f in futures]
+
+        for res in results:
+            z_opt = res['z_opt']
+            sigma, mu = res['sigma'], res['mu']
 
             try:
                 pred = self._forward(sigma, mu, self.integ_range_verify)
@@ -252,9 +264,9 @@ class GANDoddExperiment(ABC):
 
             if verbose:
                 print(
-                    f"  Restart {restart + 1:2d}/{self.n_restarts}: "
+                    f"  Restart {res['restart_idx'] + 1:2d}/{self.n_restarts}: "
                     f"|V| = {mismatch:.3e} V  "
-                    f"(iters={opt.nit}, J={opt.fun:.3e})"
+                    f"(iters={res['nit']}, J={res['fun']:.3e}, time={res['elapsed']:.1f}s)"
                 )
 
             if mismatch < best_mismatch:

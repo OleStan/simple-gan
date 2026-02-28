@@ -25,39 +25,46 @@ from models.improved_wgan_v2.model import (
 
 class ProfileDataset(torch.utils.data.Dataset):
     """Dataset for σ and μ profiles."""
-    
+
     def __init__(self, data_path, normalize=True):
         self.X = np.load(data_path)
-        
+
+        labels_path = Path(data_path).parent / 'y_labels.npy'
+        if labels_path.exists():
+            self.labels = np.load(labels_path).astype(np.int64)
+        else:
+            self.labels = np.zeros(len(self.X), dtype=np.int64)
+
         with open(Path(data_path).parent / 'normalization_params.json', 'r') as f:
             self.norm_params = json.load(f)
-        
+
         self.K = self.norm_params['K']
+        self.n_classes = self.norm_params.get('n_classes', 1)
         self.normalize = normalize
-        
+
         if normalize:
             self.X_normalized = self.X.copy()
-            
+
             sigma_data = self.X[:, :self.K]
             mu_data = self.X[:, self.K:2*self.K]
-            
-            sigma_min = sigma_data.min()
-            sigma_max = sigma_data.max()
-            mu_min = mu_data.min()
-            mu_max = mu_data.max()
-            
+
+            sigma_min = self.norm_params['sigma_min']
+            sigma_max = self.norm_params['sigma_max']
+            mu_min = self.norm_params['mu_min']
+            mu_max = self.norm_params['mu_max']
+
             self.X_normalized[:, :self.K] = 2 * (sigma_data - sigma_min) / (sigma_max - sigma_min) - 1
             self.X_normalized[:, self.K:2*self.K] = 2 * (mu_data - mu_min) / (mu_max - mu_min) - 1
-            
+
             self.data = self.X_normalized
         else:
             self.data = self.X
-    
+
     def __len__(self):
         return len(self.data)
-    
+
     def __getitem__(self, idx):
-        return torch.FloatTensor(self.data[idx])
+        return torch.FloatTensor(self.data[idx]), torch.tensor(self.labels[idx], dtype=torch.long)
 
 
 def denormalize_profiles(data, norm_params, K):
@@ -115,7 +122,8 @@ def main():
         norm_params_temp = json.load(f)
     
     K = norm_params_temp['K']
-    
+    n_classes = norm_params_temp.get('n_classes', 1)
+
     epoch_num = 500
     batch_size = 32
     nz = 100
@@ -175,10 +183,10 @@ def main():
     
     print(f"\nDataset loaded: {len(dataset)} samples")
     
-    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False).to(device)
+    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False, n_classes=n_classes).to(device)
     netG.apply(weights_init)
-    
-    netC = SpectralNormConv1DCritic(K=K, use_spectral_norm=use_spectral_norm).to(device)
+
+    netC = SpectralNormConv1DCritic(K=K, use_spectral_norm=use_spectral_norm, n_classes=n_classes).to(device)
     if not use_spectral_norm:
         netC.apply(weights_init)
     
@@ -223,6 +231,7 @@ def main():
         'batch_size': batch_size,
         'nz': nz,
         'K': K,
+        'n_classes': n_classes,
         'use_spectral_norm': use_spectral_norm,
         'use_gradient_penalty': use_gradient_penalty,
         'max_grad_norm': max_grad_norm,
@@ -266,40 +275,43 @@ def main():
         else:
             lambda_physics = lambda_physics_end
         
-        for i, real_data in enumerate(dataloader):
+        for i, (real_data, real_labels) in enumerate(dataloader):
             real_data = real_data.to(device)
+            real_labels = real_labels.to(device)
             batch_size_current = real_data.size(0)
-            
+
             for _ in range(n_critic):
                 netC.zero_grad()
-                
-                output_real = netC(real_data)
-                
+
+                output_real = netC(real_data, real_labels if n_classes > 1 else None)
+
                 noise = torch.randn(batch_size_current, nz, device=device)
-                fake_data, _, _ = netG(noise)
-                output_fake = netC(fake_data.detach())
-                
+                fake_labels = torch.randint(0, max(n_classes, 1), (batch_size_current,), device=device)
+                fake_data, _, _ = netG(noise, labels=fake_labels if n_classes > 1 else None)
+                output_fake = netC(fake_data.detach(), fake_labels if n_classes > 1 else None)
+
                 critic_loss = output_fake.mean() - output_real.mean()
-                
+
                 if use_gradient_penalty:
                     gp = compute_gradient_penalty(netC, real_data, fake_data.detach(), device, lambda_gp)
                     critic_loss += gp
                     gradient_penalty_val = gp.item()
                 else:
                     gradient_penalty_val = 0.0
-                
+
                 critic_loss.backward()
-                
+
                 torch.nn.utils.clip_grad_norm_(netC.parameters(), max_grad_norm)
-                
+
                 optimizerC.step()
-            
+
             netG.zero_grad()
-            
+
             noise = torch.randn(batch_size_current, nz, device=device)
-            fake_data, sigma_fake, mu_fake = netG(noise)
-            
-            output_fake = netC(fake_data)
+            fake_labels = torch.randint(0, max(n_classes, 1), (batch_size_current,), device=device)
+            fake_data, sigma_fake, mu_fake = netG(noise, labels=fake_labels if n_classes > 1 else None)
+
+            output_fake = netC(fake_data, fake_labels if n_classes > 1 else None)
             g_loss_adv = -output_fake.mean()
             
             physics_loss, physics_metrics = physics_loss_fn(
@@ -316,7 +328,7 @@ def main():
             optimizerG.step()
             
             wasserstein_distance = output_real.mean().item() - output_fake.mean().item()
-            
+
             if i % 10 == 0:
                 print(f'[{epoch}/{epoch_num}][{i}/{len(dataloader)}] '
                       f'Loss_C: {critic_loss.item():.4f} '
@@ -337,11 +349,13 @@ def main():
         if epoch % 10 == 0:
             netG.eval()
             with torch.no_grad():
-                test_fake, test_sigma, test_mu = netG(fixed_noise)
-                
+                vis_labels = torch.arange(16, device=device) % max(n_classes, 1)
+                test_fake, test_sigma, test_mu = netG(fixed_noise, labels=vis_labels if n_classes > 1 else None)
+
                 test_sigma_np = test_sigma.cpu().numpy()
                 test_mu_np = test_mu.cpu().numpy()
-                
+                vis_labels_np = vis_labels.cpu().numpy()
+
                 metrics = {
                     'sigma_smoothness': float(ProfileQualityMetrics.smoothness(test_sigma_np)),
                     'mu_smoothness': float(ProfileQualityMetrics.smoothness(test_mu_np)),
@@ -350,37 +364,40 @@ def main():
                     'sigma_diversity': float(ProfileQualityMetrics.diversity(test_sigma_np)),
                     'mu_diversity': float(ProfileQualityMetrics.diversity(test_mu_np))
                 }
-                
+
                 for key, value in metrics.items():
                     training_history['quality_metrics'][key].append(value)
-                
+
                 print(f'\nQuality Metrics (epoch {epoch}):')
                 print(f'  σ smoothness: {metrics["sigma_smoothness"]:.4f}')
                 print(f'  μ smoothness: {metrics["mu_smoothness"]:.4f}')
                 print(f'  σ diversity: {metrics["sigma_diversity"]:.4f}')
                 print(f'  μ diversity: {metrics["mu_diversity"]:.4f}\n')
-                
+
                 fig, axes = plt.subplots(2, 2, figsize=(12, 10))
                 fig.suptitle(f'Epoch {epoch} - Generated Profiles', fontsize=14, fontweight='bold')
-                
+
                 for i in range(4):
                     row = i // 2
                     col = i % 2
                     ax = axes[row, col]
-                    
+
                     ax.plot(test_sigma_np[i], label='σ (normalized)', alpha=0.7, linewidth=2)
                     ax.plot(test_mu_np[i], label='μ (normalized)', alpha=0.7, linewidth=2)
                     ax.set_xlabel('Layer Index')
                     ax.set_ylabel('Normalized Value')
-                    ax.set_title(f'Sample {i+1}')
+                    title = f'Sample {i+1}'
+                    if n_classes > 1:
+                        title += f' (Class {vis_labels_np[i]})'
+                    ax.set_title(title)
                     ax.legend()
                     ax.grid(True, alpha=0.3)
                     ax.set_ylim(-1.2, 1.2)
-                
+
                 plt.tight_layout()
                 plt.savefig(f'{output_dir}/training_images/epoch_{epoch:04d}.png', dpi=100, bbox_inches='tight')
                 plt.close()
-            
+
             netG.train()
         
         if epoch % 50 == 0 or epoch == epoch_num - 1:

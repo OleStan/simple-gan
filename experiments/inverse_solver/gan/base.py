@@ -16,6 +16,7 @@ from dataclasses import dataclass, replace as dataclass_replace
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import torch
@@ -24,9 +25,11 @@ from scipy.optimize import minimize
 ROOT = Path(__file__).parents[3]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "models" / "improved_wgan_v2"))
+sys.path.insert(0, str(ROOT / "experiments" / "inverse_solver"))
 
 from eddy_current_workflow.forward.edc_solver import edc_forward, ProbeSettings, EDCResponse
 from visualize import plot_profile_comparison, plot_sigma_comparison, plot_mu_comparison, plot_decision_criteria
+from optimization_utils import run_single_restart_gan
 
 
 MODEL_DIR = ROOT / "results" / "improved_wgan_v2_nz32_20260214_140817"
@@ -229,19 +232,7 @@ class GANInverseExperiment(ABC):
     def optimize(self, edc_target: EDCResponse, verbose: bool = True) -> GANInverseResult:
         """
         Multi-restart L-BFGS-B in latent space z ∈ ℝ³².
-
-        Improvements over v1:
-          1. Finite-difference epsilon = self.fd_epsilon (default 1e-3)
-             → fixes 0-iter exits caused by eps too small for z→ΔZ mapping
-          2. Normalised objective J = ‖residual‖²/‖target‖²
-             → scale-independent, same units across frequencies
-          3. Multi-frequency support (self.frequencies is not None)
-             → more constraints, better-conditioned problem
-          4. Warm-start: pre-screen n_restarts*10 candidates, keep the best
-             → avoids wasting iterations on flat/saddle initial z₀
-          5. Two-tier accuracy: n_quad_opt (fast) for search, n_quad_refine
-             for a polish pass, n_quad_verify for the final mismatch check
-             → 5× faster per restart, refinement closes accuracy gap
+        Parallelized across restarts using ProcessPoolExecutor.
         """
         rng = np.random.default_rng(self.seed)
         target_vec, scale = self._build_target_vec(edc_target)
@@ -259,22 +250,36 @@ class GANInverseExperiment(ABC):
 
         z0_list = self._warm_start_candidates(target_vec, rng, n_candidates=self.n_restarts * 10)
 
-        for restart, z0 in enumerate(z0_list):
-            opt = minimize(
-                self._objective,
-                z0,
-                args=(target_vec, scale),
-                method="L-BFGS-B",
-                options={
-                    "maxiter": self.n_iter,
-                    "ftol": 1e-15,
-                    "gtol": 1e-10,
-                    "eps": self.fd_epsilon,
-                },
-            )
+        # Build worker configuration
+        config = {
+            'root_dir': str(ROOT),
+            'model_path': str(MODEL_DIR / "models" / "netG_final.pt"),
+            'norm': self.norm,
+            'nz': NZ,
+            'K': K,
+            'use_cuda': False, # Avoid CUDA issues in subprocesses
+            'frequencies': self.frequencies if self.frequencies is not None else [PROBE_BASE.frequency],
+            'probe_base': PROBE_BASE,
+            'layer_thickness': LAYER_THICKNESS,
+            'n_quad_opt': self.n_quad_opt,
+            'n_iter': self.n_iter,
+            'fd_epsilon': self.fd_epsilon,
+        }
 
-            z_opt = opt.x.astype(np.float32)
-            sigma, mu = self._decode_z(z_opt)
+        if verbose:
+            print(f"  Running {self.n_restarts} restarts in parallel...")
+
+        with ProcessPoolExecutor() as executor:
+            futures = [
+                executor.submit(run_single_restart_gan, i, z0, target_vec, scale, config)
+                for i, z0 in enumerate(z0_list)
+            ]
+            
+            results = [f.result() for f in futures]
+
+        for res in results:
+            z_opt = res['z_opt']
+            sigma, mu = res['sigma'], res['mu']
 
             try:
                 check = edc_forward(sigma, mu, PROBE, LAYER_THICKNESS, n_quad=self.n_quad_refine)
@@ -284,8 +289,8 @@ class GANInverseExperiment(ABC):
 
             all_mismatches.append(float(mismatch))
             if verbose:
-                print(f"  Restart {restart+1:2d}/{self.n_restarts}: |ΔZ| = {mismatch:.3e} Ω  "
-                      f"(iters={opt.nit}, J={opt.fun:.3e})")
+                print(f"  Restart {res['restart_idx']+1:2d}/{self.n_restarts}: |ΔZ| = {mismatch:.3e} Ω  "
+                      f"(iters={res['nit']}, J={res['fun']:.3e}, time={res['elapsed']:.1f}s)")
 
             if mismatch < best_mismatch:
                 best_mismatch = mismatch
