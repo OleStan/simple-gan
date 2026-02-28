@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+dodd_analytical_model/
 
 # Training data
 *.npy
