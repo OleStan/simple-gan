@@ -1,0 +1,31 @@
+{
+  "n_samples": 1000,
+  "K": 50,
+  "n_classes": 2,
+  "sigma": {
+    "min": 8209090.5,
+    "max": 64277928.0,
+    "mean": 24753560.0,
+    "std": 14652283.0
+  },
+  "mu": {
+    "min": 0.909192681312561,
+    "max": 98.96461486816406,
+    "mean": 31.79497528076172,
+    "std": 24.795534133911133
+  },
+  "model_dir": "/workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear_v2/dual_wgan_nz30_nc2_20260228_225651/",
+  "generation_date": "2026-02-28T23:03:13.031365",
+  "per_class": {
+    "0": {
+      "sigma_mean": 30026188.0,
+      "mu_mean": 26.023595809936523,
+      "n_samples": 500
+    },
+    "1": {
+      "sigma_mean": 19480932.0,
+      "mu_mean": 37.56636047363281,
+      "n_samples": 500
+    }
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "model_name": "Improved WGAN v2",
+  "overall_passed": true,
+  "criteria": {
+    "1_moment_matching": {
+      "passed": true,
+      "mean_rel_diff": 0.09214145237278414,
+      "variance_ratio": 0.9853636602156054,
+      "mode_collapse": false,
+      "noise_amplification": false
+    },
+    "2_distribution_distance": {
+      "wasserstein_mean": 0.05678068650570433,
+      "mmd_score": 0.043234121238069134,
+      "mmd_sigma": 0.019786168875600585,
+      "mmd_mu": 0.02344795236246855
+    },
+    "3_latent_traversal": {
+      "passed": true,
+      "active_dimensions": 20,
+      "total_tested": 20,
+      "inactive_ratio": 0.0,
+      "smoothness_score": 1.0
+    },
+    "4_physics_consistency": {
+      "passed": true,
+      "bounds_sigma_ratio": 1.0,
+      "bounds_mu_ratio": 1.0,
+      "forward_valid": 20,
+      "forward_total": 20
+    },
+    "5_noise_robustness": {
+      "passed": true,
+      "mean_lipschitz": 1.057413580417633
+    },
+    "6_class_separation": {
+      "passed": true,
+      "n_classes": 2,
+      "separation_ratio": 1.8366000688952768,
+      "inter_class_wasserstein_real": 0.07138029156691408,
+      "inter_class_wasserstein_gen": 0.13109704859321936,
+      "per_class_real": [
+        {
+          "sigma_mean": -0.1634218938627358,
+          "sigma_std": 0.505289768335165,
+          "mu_mean": -0.3006746624630269,
+          "mu_std": 0.41087470383271846,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": -0.20596701905108594,
+          "sigma_std": 0.3977927985253526,
+          "mu_mean": -0.2969160428806915,
+          "mu_std": 0.4101018089001806,
+          "n_samples": 2000
+        }
+      ],
+      "per_class_gen": [
+        {
+          "sigma_mean": -0.24370259046554565,
+          "sigma_std": 0.5243054628372192,
+          "mu_mean": -0.3466140031814575,
+          "mu_std": 0.40161725878715515,
+          "n_samples": 100
+        },
+        {
+          "sigma_mean": -0.1208629161119461,
+          "sigma_std": 0.3970966339111328,
+          "mu_mean": -0.26961246132850647,
+          "mu_std": 0.42239418625831604,
+          "n_samples": 100
+        }
+      ]
+    }
+  }
+}

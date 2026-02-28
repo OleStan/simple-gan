@@ -1,0 +1,67 @@
+Using device: cuda:0
+
+Configuration:
+  Model: dual_wgan
+  K: 50
+  nz: 20
+  n_classes: 2
+  Model dir: /workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear/dual_wgan_nz20_nc2_20260228_221103/
+
+Loading generator...
+Loading real data...
+  Real data shape: (4000, 100)
+  Class 0: 2000 samples
+  Class 1: 2000 samples
+
+Generating 200 samples...
+  Generated data shape: (200, 100)
+
+Running quality checks...
+[Quality Check] Running all 6 criteria for 'Dual-Head WGAN'...
+  [1] Moment comparison (mean & variance)...
+  [2] Distribution distances (Wasserstein & MMD)...
+  [3] Latent space traversal...
+  [4] Noise robustness...
+  [5] Physics consistency...
+  [6] Class separation...
+  [Done] Overall: PASSED
+Generating quality report in /workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear/dual_wgan_nz20_nc2_20260228_221103/quality_report...
+Report saved to /workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear/dual_wgan_nz20_nc2_20260228_221103/quality_report/quality_report.md
+
+============================================================
+QUALITY VALIDATION SUMMARY
+============================================================
+  1_moment_matching: PASS
+    mean_rel_diff: 0.3184762871331379
+    variance_ratio: 0.9911585811174003
+    mode_collapse: False
+    noise_amplification: False
+  2_distribution_distance: INFO
+    wasserstein_mean: 0.06276263480422611
+    mmd_score: 0.08440815847998873
+    mmd_sigma: 0.03421525449452023
+    mmd_mu: 0.050192903985468496
+  3_latent_traversal: PASS
+    active_dimensions: 20
+    total_tested: 20
+    inactive_ratio: 0.0
+    smoothness_score: 1.0
+  4_physics_consistency: PASS
+    bounds_sigma_ratio: 1.0
+    bounds_mu_ratio: 1.0
+    forward_valid: 20
+    forward_total: 20
+  5_noise_robustness: PASS
+    mean_lipschitz: 1.2287129330635072
+  6_class_separation: PASS
+    n_classes: 2
+    separation_ratio: 3.811012319238692
+    inter_class_wasserstein_real: 0.07138029156691408
+    inter_class_wasserstein_gen: 0.2720311708934605
+    per_class_real: [{'sigma_mean': -0.1634218938627358, 'sigma_std': 0.505289768335165, 'mu_mean': -0.3006746624630269, 'mu_std': 0.41087470383271846, 'n_samples': 2000}, {'sigma_mean': -0.20596701905108594, 'sigma_std': 0.3977927985253526, 'mu_mean': -0.2969160428806915, 'mu_std': 0.4101018089001806, 'n_samples': 2000}]
+    per_class_gen: [{'sigma_mean': -0.32339444756507874, 'sigma_std': 0.4431317150592804, 'mu_mean': -0.4602700173854828, 'mu_std': 0.344687819480896, 'n_samples': 100}, {'sigma_mean': -0.06917630881071091, 'sigma_std': 0.4893468916416168, 'mu_mean': -0.17042581737041473, 'mu_std': 0.4513760507106781, 'n_samples': 100}]
+
+  Overall: PASSED
+
+Full report: /workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear/dual_wgan_nz20_nc2_20260228_221103/quality_report/quality_report.md
+Plots: /workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear/dual_wgan_nz20_nc2_20260228_221103/quality_report/plots/

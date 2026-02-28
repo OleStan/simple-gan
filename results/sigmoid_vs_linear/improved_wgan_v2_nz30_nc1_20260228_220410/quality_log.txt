@@ -1,0 +1,32 @@
+Using device: cuda:0
+
+Configuration:
+  Model: improved_wgan_v2
+  K: 51
+  nz: 30
+  n_classes: 1
+  Model dir: /workspace/GANs-for-1D-Signal/results/sigmoid_vs_linear/improved_wgan_v2_nz30_nc1_20260228_220410/
+
+Loading generator...
+Loading real data...
+  Real data shape: (4000, 100)
+
+Generating 200 samples...
+  Generated data shape: (200, 102)
+
+Running quality checks...
+[Quality Check] Running all 5 criteria for 'Improved WGAN v2'...
+  [1] Moment comparison (mean & variance)...
+Traceback (most recent call last):
+  File "/workspace/GANs-for-1D-Signal/scripts/reports/run_quality_check.py", line 209, in <module>
+    main()
+  File "/workspace/GANs-for-1D-Signal/scripts/reports/run_quality_check.py", line 167, in main
+    report = checker.run_all_checks(
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/GANs-for-1D-Signal/eddy_current_workflow/quality/quality_checker.py", line 152, in run_all_checks
+    moment_result = compute_moment_comparison(real_data, generated_data, self.K)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/GANs-for-1D-Signal/eddy_current_workflow/quality/metrics.py", line 61, in compute_moment_comparison
+    mean_abs_diff = float(np.mean(np.abs(real_mean - gen_mean)))
+                                         ~~~~~~~~~~^~~~~~~~~~
+ValueError: operands could not be broadcast together with shapes (100,) (102,) 

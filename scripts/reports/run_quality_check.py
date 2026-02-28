@@ -39,7 +39,7 @@ def load_dual_wgan_generator(model_dir: str, nz: int, K: int, device: torch.devi
 
 def load_improved_wgan_v2_generator(model_dir: str, nz: int, K: int, device: torch.device, n_classes: int = 1):
     from models.improved_wgan_v2.model import ConditionalConv1DGenerator
-    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=False, n_classes=n_classes).to(device)
+    netG = ConditionalConv1DGenerator(nz=nz, K=K, conditional=(n_classes > 1), n_classes=n_classes).to(device)
 
     model_path = Path(model_dir) / 'models' / 'netG_final.pt'
     if not model_path.exists():

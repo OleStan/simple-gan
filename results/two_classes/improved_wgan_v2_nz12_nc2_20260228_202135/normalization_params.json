@@ -1,0 +1,33 @@
+{
+  "K": 50,
+  "sigma_min": 1014294.5096391782,
+  "sigma_max": 420570766.69381666,
+  "mu_min": 1.0185679281840336,
+  "mu_max": 187.49133291561967,
+  "N": 4000,
+  "n_classes": 2,
+  "class_configs": [
+    {
+      "name": "low_conductivity",
+      "sigma_bounds": [
+        1000000.0,
+        10000000.0
+      ],
+      "mu_bounds": [
+        1.0,
+        10.0
+      ]
+    },
+    {
+      "name": "high_conductivity",
+      "sigma_bounds": [
+        20000000.0,
+        60000000.0
+      ],
+      "mu_bounds": [
+        1.0,
+        50.0
+      ]
+    }
+  ]
+}

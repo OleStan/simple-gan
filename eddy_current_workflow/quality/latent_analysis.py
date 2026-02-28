@@ -59,6 +59,7 @@ def compute_latent_traversal(
     alpha_range: float = 3.0,
     activity_threshold: float = 0.01,
     smoothness_threshold: float = 5.0,
+    labels: Optional[torch.Tensor] = None,
 ) -> LatentTraversalResult:
     generator.eval()
     rng = np.random.default_rng(42)
@@ -67,12 +68,21 @@ def compute_latent_traversal(
     test_dims = rng.choice(nz, dims_to_test, replace=False)
 
     z0 = torch.randn(1, nz, device=device)
+    
+    # If labels are provided, take the first one for traversal
+    if labels is not None:
+        if isinstance(labels, np.ndarray):
+            labels = torch.from_numpy(labels).to(device)
+        traversal_labels = labels[0:1]
+    else:
+        traversal_labels = None
+    
     alphas = np.linspace(-alpha_range, alpha_range, n_alpha_steps)
 
     dimension_results = []
 
     with torch.no_grad():
-        base_output, _, _ = generator(z0)
+        base_output, _, _ = generator(z0, labels=traversal_labels)
         base_output_np = base_output.cpu().numpy().flatten()
 
         for dim_idx in test_dims:
@@ -80,7 +90,7 @@ def compute_latent_traversal(
             for alpha in alphas:
                 z_traversed = z0.clone()
                 z_traversed[0, dim_idx] = z0[0, dim_idx] + alpha
-                out, _, _ = generator(z_traversed)
+                out, _, _ = generator(z_traversed, labels=traversal_labels)
                 outputs.append(out.cpu().numpy().flatten())
 
             outputs = np.array(outputs)
@@ -131,10 +141,11 @@ def compute_noise_robustness(
     generator: torch.nn.Module,
     nz: int,
     device: torch.device,
-    noise_levels: Optional[List[float]] = None,
-    n_base_samples: int = 50,
-    n_perturbations: int = 10,
-    lipschitz_threshold: float = 10.0,
+    n_base_samples: int = 10,
+    n_perturbations: int = 5,
+    noise_levels: Optional[list] = None,
+    lipschitz_threshold: float = 2.0,
+    labels: Optional[torch.Tensor] = None,
 ) -> NoiseRobustnessResult:
     if noise_levels is None:
         noise_levels = [0.01, 0.05, 0.1, 0.2, 0.5]
@@ -142,9 +153,17 @@ def compute_noise_robustness(
     generator.eval()
 
     z_base = torch.randn(n_base_samples, nz, device=device)
+    
+    # Use provided labels or default to zeros if none
+    if labels is not None:
+        if isinstance(labels, np.ndarray):
+            labels = torch.from_numpy(labels).to(device)
+        traversal_labels = labels[0:n_base_samples]
+    else:
+        traversal_labels = None
 
     with torch.no_grad():
-        base_outputs, _, _ = generator(z_base)
+        base_outputs, _, _ = generator(z_base, labels=traversal_labels)
         base_outputs_np = base_outputs.cpu().numpy()
 
     mean_changes = []
@@ -159,8 +178,9 @@ def compute_noise_robustness(
                 epsilon = torch.randn_like(z_base) * sigma
                 z_perturbed = z_base + epsilon
 
-                perturbed_outputs, _, _ = generator(z_perturbed)
+                perturbed_outputs, _, _ = generator(z_perturbed, labels=traversal_labels)
                 perturbed_np = perturbed_outputs.cpu().numpy()
+
 
                 output_diffs = np.linalg.norm(perturbed_np - base_outputs_np, axis=1)
                 input_diffs = np.linalg.norm(epsilon.cpu().numpy(), axis=1)

@@ -160,11 +160,13 @@ class GANQualityChecker:
         traversal_result = compute_latent_traversal(
             generator, self.nz, self.device,
             n_dimensions_to_test=n_latent_dims_to_test,
+            labels=gen_labels,
         )
 
         print("  [4] Noise robustness...")
         robustness_result = compute_noise_robustness(
             generator, self.nz, self.device,
+            labels=gen_labels,
         )
 
         phys_gen = generated_data_physical if generated_data_physical is not None else generated_data

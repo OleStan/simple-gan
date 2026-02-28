@@ -349,9 +349,12 @@ def plot_training_curves(model_dir, save_path=None):
     return fig
 
 
-def generate_report(model_dir, n_samples=1000):
+def generate_report(model_dir, n_samples=1000, training_data_dir='data/training'):
     """Generate comprehensive report."""
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    train_dir = Path(training_data_dir)
+    real_x_path = train_dir / 'X_raw.npy'
+    real_y_path = train_dir / 'y_labels.npy'
 
     print("="*60)
     print("Generating WGAN Dual-Head Report")
@@ -382,13 +385,16 @@ def generate_report(model_dir, n_samples=1000):
                          labels=gen_labels if n_classes > 1 else None,
                          save_path=f'{report_dir}/sample_profiles.png')
 
-    print(f"  2/{n_plots} Paired comparison (Real vs Generated)...")
-    plot_paired_comparison('./training_data/X_raw.npy', sigma_gen, mu_gen, K, n_pairs=6,
-                           save_path=f'{report_dir}/paired_comparison.png')
+    if real_x_path.exists():
+        print(f"  2/{n_plots} Paired comparison (Real vs Generated)...")
+        plot_paired_comparison(str(real_x_path), sigma_gen, mu_gen, K, n_pairs=6,
+                               save_path=f'{report_dir}/paired_comparison.png')
 
-    print(f"  3/{n_plots} Distribution comparison...")
-    plot_distribution_comparison('./training_data/X_raw.npy', sigma_gen, mu_gen, K,
-                                 save_path=f'{report_dir}/distribution_comparison.png')
+        print(f"  3/{n_plots} Distribution comparison...")
+        plot_distribution_comparison(str(real_x_path), sigma_gen, mu_gen, K,
+                                     save_path=f'{report_dir}/distribution_comparison.png')
+    else:
+        print(f"  WARN: Real data not found at {real_x_path}, skipping comparisons.")
 
     print(f"  4/{n_plots} Training curves...")
     curves_fig = plot_training_curves(model_dir, save_path=f'{report_dir}/training_curves.png')
@@ -415,7 +421,7 @@ def generate_report(model_dir, n_samples=1000):
     plt.savefig(f'{report_dir}/detailed_samples.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-    if n_classes > 1:
+    if n_classes > 1 and real_x_path.exists():
         print(f"  6/{n_plots} Per-class distribution comparison...")
         sigma_per_class = {}
         mu_per_class = {}
@@ -427,9 +433,9 @@ def generate_report(model_dir, n_samples=1000):
             mu_per_class[cls] = mu_gen_cls
 
         plot_per_class_distributions(
-            './training_data/X_raw.npy',
+            str(real_x_path),
             sigma_per_class, mu_per_class, K,
-            real_labels_path='./training_data/y_labels.npy',
+            real_labels_path=str(real_y_path) if real_y_path.exists() else None,
             n_classes=n_classes,
             save_path=f'{report_dir}/per_class_distributions.png',
         )

@@ -1,0 +1,37 @@
+{
+  "K": 50,
+  "sigma_min": 1020293.358734269,
+  "sigma_max": 59907394.31921145,
+  "mu_min": 1.0380817917640603,
+  "mu_max": 99.53020254209375,
+  "N": 4000,
+  "n_classes": 2,
+  "class_configs": [
+    {
+      "name": "sigmoid_sigma",
+      "sigma_profile_type": "sigmoid",
+      "mu_profile_type": "linear",
+      "sigma_shape_bounds": [
+        5.0,
+        20.0
+      ],
+      "mu_shape_bounds": [
+        0.5,
+        2.0
+      ]
+    },
+    {
+      "name": "linear_sigma",
+      "sigma_profile_type": "linear",
+      "mu_profile_type": "linear",
+      "sigma_shape_bounds": [
+        0.5,
+        2.0
+      ],
+      "mu_shape_bounds": [
+        0.5,
+        2.0
+      ]
+    }
+  ]
+}

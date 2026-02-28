@@ -1,0 +1,37 @@
+{
+  "model_name": "Improved WGAN v2",
+  "overall_passed": true,
+  "criteria": {
+    "1_moment_matching": {
+      "passed": true,
+      "mean_rel_diff": 0.06371788391925143,
+      "variance_ratio": 1.019041877468365,
+      "mode_collapse": false,
+      "noise_amplification": false
+    },
+    "2_distribution_distance": {
+      "wasserstein_mean": 0.03432954102967506,
+      "mmd_score": 0.1990203314484842,
+      "mmd_sigma": 0.08220679130045128,
+      "mmd_mu": 0.11681354014803291
+    },
+    "3_latent_traversal": {
+      "passed": true,
+      "active_dimensions": 20,
+      "total_tested": 20,
+      "inactive_ratio": 0.0,
+      "smoothness_score": 1.0
+    },
+    "4_physics_consistency": {
+      "passed": true,
+      "bounds_sigma_ratio": 1.0,
+      "bounds_mu_ratio": 1.0,
+      "forward_valid": 20,
+      "forward_total": 20
+    },
+    "5_noise_robustness": {
+      "passed": true,
+      "mean_lipschitz": 0.4794250720739365
+    }
+  }
+}

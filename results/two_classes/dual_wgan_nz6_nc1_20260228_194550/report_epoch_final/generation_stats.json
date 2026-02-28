@@ -1,0 +1,19 @@
+{
+  "n_samples": 1000,
+  "K": 51,
+  "n_classes": 1,
+  "sigma": {
+    "min": 18929916.0,
+    "max": 38920760.0,
+    "mean": 28194382.0,
+    "std": 7553354.5
+  },
+  "mu": {
+    "min": 1.0922725200653076,
+    "max": 8.917332649230957,
+    "mean": 4.887019634246826,
+    "std": 3.110704183578491
+  },
+  "model_dir": "/workspace/GANs-for-1D-Signal/results/two_classes/dual_wgan_nz6_nc1_20260228_194550/",
+  "generation_date": "2026-02-28T20:02:46.394321"
+}

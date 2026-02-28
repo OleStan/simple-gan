@@ -58,6 +58,11 @@ def main():
 
     print(f"\n✓ Model loaded from epoch {epoch_num} (K={K} layers, n_classes={n_classes})")
 
+    # Add training data path handling
+    training_data_dir = Path('data/training')
+    real_x_path = training_data_dir / 'X_raw.npy'
+    real_y_path = training_data_dir / 'y_labels.npy'
+
     print("\nGenerating 1000 samples...")
     n_samples = 1000
     generated_samples = []
@@ -128,65 +133,68 @@ def main():
     plt.savefig(output_dir / 'sample_profiles.png', dpi=150, bbox_inches='tight')
     plt.close()
     
-    print(f"  2/{n_plots} Distribution comparison...")
-    real_data = np.load('training_data/X_raw.npy')
-    sigma_real = real_data[:, :K]
-    mu_real = real_data[:, K:2*K]
-    
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('Distribution Comparison: Real vs Generated', fontsize=16, fontweight='bold')
-    
-    axes[0, 0].hist(sigma_real.flatten(), bins=50, alpha=0.5, label='Real', density=True)
-    axes[0, 0].hist(sigma_denorm.flatten(), bins=50, alpha=0.5, label='Generated', density=True)
-    axes[0, 0].set_xlabel('σ (S/m)')
-    axes[0, 0].set_ylabel('Density')
-    axes[0, 0].set_title('σ Distribution')
-    axes[0, 0].legend()
-    axes[0, 0].grid(True, alpha=0.3)
-    
-    axes[0, 1].hist(mu_real.flatten(), bins=50, alpha=0.5, label='Real', density=True)
-    axes[0, 1].hist(mu_denorm.flatten(), bins=50, alpha=0.5, label='Generated', density=True)
-    axes[0, 1].set_xlabel('μ (relative)')
-    axes[0, 1].set_ylabel('Density')
-    axes[0, 1].set_title('μ Distribution')
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    axes[1, 0].plot(sigma_real.mean(axis=0), label='Real mean', linewidth=2)
-    axes[1, 0].plot(sigma_denorm.mean(axis=0), label='Generated mean', linewidth=2, linestyle='--')
-    axes[1, 0].fill_between(range(K), 
-                            sigma_real.mean(axis=0) - sigma_real.std(axis=0),
-                            sigma_real.mean(axis=0) + sigma_real.std(axis=0),
-                            alpha=0.2, label='Real ±σ')
-    axes[1, 0].fill_between(range(K),
-                            sigma_denorm.mean(axis=0) - sigma_denorm.std(axis=0),
-                            sigma_denorm.mean(axis=0) + sigma_denorm.std(axis=0),
-                            alpha=0.2, label='Generated ±σ')
-    axes[1, 0].set_xlabel('Layer Index')
-    axes[1, 0].set_ylabel('σ (S/m)')
-    axes[1, 0].set_title('σ Profile Statistics')
-    axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    axes[1, 1].plot(mu_real.mean(axis=0), label='Real mean', linewidth=2)
-    axes[1, 1].plot(mu_denorm.mean(axis=0), label='Generated mean', linewidth=2, linestyle='--')
-    axes[1, 1].fill_between(range(K),
-                            mu_real.mean(axis=0) - mu_real.std(axis=0),
-                            mu_real.mean(axis=0) + mu_real.std(axis=0),
-                            alpha=0.2, label='Real ±σ')
-    axes[1, 1].fill_between(range(K),
-                            mu_denorm.mean(axis=0) - mu_denorm.std(axis=0),
-                            mu_denorm.mean(axis=0) + mu_denorm.std(axis=0),
-                            alpha=0.2, label='Generated ±σ')
-    axes[1, 1].set_xlabel('Layer Index')
-    axes[1, 1].set_ylabel('μ (relative)')
-    axes[1, 1].set_title('μ Profile Statistics')
-    axes[1, 1].legend()
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig(output_dir / 'distribution_comparison.png', dpi=150, bbox_inches='tight')
-    plt.close()
+    if real_x_path.exists():
+        print(f"  2/{n_plots} Distribution comparison...")
+        real_data = np.load(real_x_path)
+        sigma_real = real_data[:, :K]
+        mu_real = real_data[:, K:2*K]
+        
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+        fig.suptitle('Distribution Comparison: Real vs Generated', fontsize=16, fontweight='bold')
+        
+        axes[0, 0].hist(sigma_real.flatten(), bins=50, alpha=0.5, label='Real', density=True)
+        axes[0, 0].hist(sigma_denorm.flatten(), bins=50, alpha=0.5, label='Generated', density=True)
+        axes[0, 0].set_xlabel('σ (S/m)')
+        axes[0, 0].set_ylabel('Density')
+        axes[0, 0].set_title('σ Distribution')
+        axes[0, 0].legend()
+        axes[0, 0].grid(True, alpha=0.3)
+        
+        axes[0, 1].hist(mu_real.flatten(), bins=50, alpha=0.5, label='Real', density=True)
+        axes[0, 1].hist(mu_denorm.flatten(), bins=50, alpha=0.5, label='Generated', density=True)
+        axes[0, 1].set_xlabel('μ (relative)')
+        axes[0, 1].set_ylabel('Density')
+        axes[0, 1].set_title('μ Distribution')
+        axes[0, 1].legend()
+        axes[0, 1].grid(True, alpha=0.3)
+        
+        axes[1, 0].plot(sigma_real.mean(axis=0), label='Real mean', linewidth=2)
+        axes[1, 0].plot(sigma_denorm.mean(axis=0), label='Generated mean', linewidth=2, linestyle='--')
+        axes[1, 0].fill_between(range(K), 
+                                sigma_real.mean(axis=0) - sigma_real.std(axis=0),
+                                sigma_real.mean(axis=0) + sigma_real.std(axis=0),
+                                alpha=0.2, label='Real ±σ')
+        axes[1, 0].fill_between(range(K),
+                                sigma_denorm.mean(axis=0) - sigma_denorm.std(axis=0),
+                                sigma_denorm.mean(axis=0) + sigma_denorm.std(axis=0),
+                                alpha=0.2, label='Generated ±σ')
+        axes[1, 0].set_xlabel('Layer Index')
+        axes[1, 0].set_ylabel('σ (S/m)')
+        axes[1, 0].set_title('σ Profile Statistics')
+        axes[1, 0].legend()
+        axes[1, 0].grid(True, alpha=0.3)
+        
+        axes[1, 1].plot(mu_real.mean(axis=0), label='Real mean', linewidth=2)
+        axes[1, 1].plot(mu_denorm.mean(axis=0), label='Generated mean', linewidth=2, linestyle='--')
+        axes[1, 1].fill_between(range(K),
+                                mu_real.mean(axis=0) - mu_real.std(axis=0),
+                                mu_real.mean(axis=0) + mu_real.std(axis=0),
+                                alpha=0.2, label='Real ±σ')
+        axes[1, 1].fill_between(range(K),
+                                mu_denorm.mean(axis=0) - mu_denorm.std(axis=0),
+                                mu_denorm.mean(axis=0) + mu_denorm.std(axis=0),
+                                alpha=0.2, label='Generated ±σ')
+        axes[1, 1].set_xlabel('Layer Index')
+        axes[1, 1].set_ylabel('μ (relative)')
+        axes[1, 1].set_title('μ Profile Statistics')
+        axes[1, 1].legend()
+        axes[1, 1].grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(output_dir / 'distribution_comparison.png', dpi=150, bbox_inches='tight')
+        plt.close()
+    else:
+        print(f"  WARN: Real data not found at {real_x_path}, skipping comparisons.")
     
     print(f"  3/{n_plots} Training curves...")
     with open(model_dir / 'training_history.json', 'r') as f:
@@ -316,12 +324,11 @@ def main():
     plt.savefig(output_dir / 'quality_analysis.png', dpi=150, bbox_inches='tight')
     plt.close()
     
-    if n_classes > 1:
+    if n_classes > 1 and real_x_path.exists():
         print(f"  6/{n_plots} Per-class distribution comparison...")
         colors = ['steelblue', 'darkorange', 'forestgreen', 'crimson']
-        real_labels_path = Path('training_data/y_labels.npy')
-        if real_labels_path.exists():
-            real_labels_arr = np.load(real_labels_path).astype(np.int64)
+        if real_y_path.exists():
+            real_labels_arr = np.load(real_y_path).astype(np.int64)
         else:
             real_labels_arr = np.zeros(len(real_data), dtype=np.int64)
 
