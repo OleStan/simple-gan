@@ -23,7 +23,12 @@ REMOTE_PROJECT_DIR="${REMOTE_PROJECT_DIR:-/workspace/GANs-for-1D-Signal}"
 LOCAL_PROJECT_DIR="${LOCAL_PROJECT_DIR:-$PROJECT_ROOT}"
 
 ssh_cmd() {
-    ssh -p "$RUNPOD_SSH_PORT" -i "$RUNPOD_SSH_KEY" "$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST" "$@"
+    if [ "${SKIP_SYNC:-0}" = "1" ]; then
+        # Run directly if on pod
+        bash -c "$*"
+    else
+        ssh -p "$RUNPOD_SSH_PORT" -i "$RUNPOD_SSH_KEY" "$RUNPOD_SSH_USER@$RUNPOD_SSH_HOST" "$@"
+    fi
 }
 
 scp_download() {

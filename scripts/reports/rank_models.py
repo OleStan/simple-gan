@@ -75,7 +75,46 @@ def rank_models(results_base_dir):
     print(f"\nWINNER: {best_model['Model']} with nz={best_model['NZ']}")
     print(f"Path: {best_model['Directory']}")
     
+    # Promotion Logic
+    promote_best_model(model_dir.parent / best_model['Directory'], best_model)
+    
     return df
+
+def promote_best_model(source_dir, model_info):
+    """Promotes the best model to a central registry."""
+    import shutil
+    
+    registry_path = Path(source_dir).parent.parent.parent / "models" / "registry"
+    # Create class-specific subfolder (e.g., registry/two_classes_3000ep/)
+    target_tag = source_dir.parent.name
+    target_dir = registry_path / target_tag
+    target_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"\n[PROMOTION] Copying best model to {target_dir}...")
+    
+    # Files to promote
+    files_to_copy = [
+        ("models/netG_final.pt", "best_generator.pt"),
+        ("models/netG_final.pth", "best_generator.pth"),
+        ("config.json", "config.json"),
+        ("quality_report/quality_summary.json", "quality_summary.json")
+    ]
+    
+    for src_rel, dest_name in files_to_copy:
+        src_path = source_dir / src_rel
+        if src_path.exists():
+            shutil.copy2(src_path, target_dir / dest_name)
+            print(f"  ✓ {dest_name}")
+
+    # Save a small metadata file about the promotion
+    with open(target_dir / "promotion_info.json", "w") as f:
+        json.dump({
+            "source_directory": source_dir.name,
+            "metrics": model_info.to_dict(),
+            "date_promoted": str(pd.Timestamp.now())
+        }, f, indent=2)
+    
+    print(f"SUCCESS: Best model for {target_tag} promoted.")
 
 if __name__ == "__main__":
     import sys
