@@ -50,6 +50,7 @@ run_job() {
     local rel="models/${m}/train_latent_experiment.py"
     local cmd="cd $REMOTE_PROJECT_DIR/${rel%/*} && env RESULT_TAG=${RESULT_TAG} python train_latent_experiment.py --nz ${nz} --epochs ${EPOCHS} 2>&1 | tee ${log}"
 
+    echo "  🚀 Launching ${m} nz=${nz} in session ${s}"
     if [ "$SKIP_SYNC" != "1" ]; then
         ssh_cmd "tmux kill-session -t $s 2>/dev/null || true"
         ssh_cmd "tmux new-session -d -s $s \"$cmd\""
@@ -78,23 +79,12 @@ done
 
 # 4. Reports
 echo "=== [4/5] Running reports ==="
-REP_SCRIPT="
-export PYTHONPATH=$REMOTE_PROJECT_DIR
-for d in $REMOTE_PROJECT_DIR/results/${RESULT_TAG}/*_nz*/; do
-    [ -d \"\$d\" ] || continue
-    if [[ \"\$d\" == *dual_wgan* ]]; then
-        python $REMOTE_PROJECT_DIR/scripts/reports/generate_dual_wgan_report.py \"\$d\"
-        python $REMOTE_PROJECT_DIR/scripts/reports/run_quality_check.py --model dual_wgan --model_dir \"\$d\" --training_data $REMOTE_PROJECT_DIR/data/training --output_dir \"\$d/quality_report\"
-    else
-        python $REMOTE_PROJECT_DIR/scripts/reports/generate_improved_wgan_v2_report.py \"\$d\"
-        python $REMOTE_PROJECT_DIR/scripts/reports/run_quality_check.py --model improved_wgan_v2 --model_dir \"\$d\" --training_data $REMOTE_PROJECT_DIR/data/training --output_dir \"\$d/quality_report\"
-    fi
-done"
-
+# Instead of complex string passing, we call the marathon reporter script directly
 if [ "$SKIP_SYNC" != "1" ]; then
-    ssh_cmd "$REP_SCRIPT"
+    ssh_cmd "export PYTHONPATH=$REMOTE_PROJECT_DIR; cd $REMOTE_PROJECT_DIR && python scripts/reports/run_marathon_reports.py $RESULT_TAG"
 else
-    bash -c "$REP_SCRIPT"
+    export PYTHONPATH=$REMOTE_PROJECT_DIR
+    python "$REMOTE_PROJECT_DIR/scripts/reports/run_marathon_reports.py" "$RESULT_TAG"
 fi
 
 # 5. Download
