@@ -1,13 +1,15 @@
 {
   "K": 50,
-  "sigma_min": 8003065.293351482,
-  "sigma_max": 64957792.79218079,
-  "mu_min": 0.9001908625003656,
-  "mu_max": 103.18610921892909,
-  "N": 4000,
-  "n_classes": 2,
+  "sigma_min": 9203901.629845819,
+  "sigma_max": 59391856.253171705,
+  "mu_min": 0.9204453467730083,
+  "mu_max": 86.38567912365824,
+  "N": 8000,
+  "n_classes": 4,
   "class_names": [
-    "sigmoid",
-    "linear"
+    "sigmoid_low",
+    "sigmoid_high",
+    "linear_low",
+    "linear_high"
   ]
 }

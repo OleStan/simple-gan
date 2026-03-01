@@ -88,6 +88,11 @@ def main():
     torch.backends.cudnn.benchmark = True
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    
+    # Set save interval based on device
+    save_interval = 250 if device.type == 'cuda' else 50
+    print(f"Save interval set to {save_interval} epochs")
+
     print(f"\n{'='*70}")
     print(f"  Dual WGAN Latent Space Experiment - nz={args.nz}")
     print(f"{'='*70}")
@@ -289,7 +294,7 @@ def main():
                            dpi=150, bbox_inches='tight')
                 plt.close()
 
-        if (epoch + 1) % args.save_interval == 0:
+        if (epoch + 1) % save_interval == 0:
             torch.save(netG.state_dict(), output_dir / 'models' / f'netG_epoch_{epoch+1}.pth')
             torch.save(netC.state_dict(), output_dir / 'models' / f'netC_epoch_{epoch+1}.pth')
 

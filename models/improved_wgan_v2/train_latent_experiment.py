@@ -97,7 +97,13 @@ def main():
 
     # Setup device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    # Set save interval based on device
+    save_interval = 250 if device.type == 'cuda' else 50
+    print(f"Save interval set to {save_interval} epochs")
+
     if device.type == 'cuda':
+
         torch.backends.cudnn.benchmark = True
         print(f"Using device: {device}")
         print(f"GPU: {torch.cuda.get_device_name(0)}")
@@ -342,7 +348,7 @@ def main():
             print(f'Epoch {epoch} time: {epoch_time:.2f}s')
 
         # Save checkpoints
-        if epoch % 50 == 0 or epoch == epoch_num - 1:
+        if epoch % save_interval == 0 or epoch == epoch_num - 1:
             torch.save(netG.state_dict(), f'{output_dir}/models/netG_epoch_{epoch}.pt')
             torch.save(netC.state_dict(), f'{output_dir}/models/netC_epoch_{epoch}.pt')
 
