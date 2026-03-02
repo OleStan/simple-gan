@@ -1,4 +1,3 @@
-
 import torch
 import torch.optim as optim
 import numpy as np
@@ -12,7 +11,7 @@ from torch.cuda.amp import autocast, GradScaler
 
 from model import (
     ContinuousConditionalGenerator, SpectralNormConv1DCriticV3,
-    weights_init, GeneratorEMA, JacobianRegularizer
+    weights_init, GeneratorEMA, JacobianRegularizer, OrthogonalRegularizer
 )
 # Re-use from v2
 from models.improved_wgan_v2.model import PhysicsInformedLossV2, compute_gradient_penalty
@@ -43,12 +42,13 @@ def main():
     parser.add_argument('--epochs', type=int, default=3000)
     parser.add_argument('--batch_size', type=int, default=128)
     parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--data_dir', type=str, default='../../data/training')
     args = parser.parse_args()
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
     # Load dataset to get class count
-    dataset = ProfileDataset('../../data/training/X_raw.npy')
+    dataset = ProfileDataset(os.path.join(args.data_dir, 'X_raw.npy'))
     n_classes = dataset.norm_params['n_classes']
     K = dataset.K
     
@@ -60,7 +60,9 @@ def main():
     
     ema = GeneratorEMA(netG)
     jacobian_reg = JacobianRegularizer(lambda_jacobian=0.05)
-    physics_loss_fn = PhysicsInformedLossV2()
+    ortho_reg = OrthogonalRegularizer(lambda_ortho=1e-4)
+    # lambda_bounds increased to 0.1 for stricter physical compliance
+    physics_loss_fn = PhysicsInformedLossV2(lambda_bounds=0.1)
     
     optimizerG = optim.Adam(netG.parameters(), lr=args.lr, betas=(0.5, 0.999))
     optimizerC = optim.Adam(netC.parameters(), lr=args.lr, betas=(0.5, 0.999))
@@ -78,6 +80,14 @@ def main():
     output_dir = Path(f"../../results/{tag}/improved_wgan_v3_nz{args.nz}_{timestamp}")
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "models").mkdir(exist_ok=True)
+
+    # Save config
+    config = {
+        'nz': args.nz, 'epochs': args.epochs, 'batch_size': args.batch_size,
+        'lr': args.lr, 'data_dir': args.data_dir, 'n_classes': n_classes, 'K': K
+    }
+    with open(output_dir / 'config.json', 'w') as f:
+        json.dump(config, f, indent=2)
 
     print(f"Starting V3 Training: {args.nz} nz, {args.epochs} epochs")
 
@@ -109,8 +119,9 @@ def main():
                 _, sigma_f, mu_f = netG(noise, labels=gen_labels)
                 p_loss, _ = physics_loss_fn(sigma_f, mu_f, epoch=epoch, max_epochs=args.epochs)
                 j_loss = jacobian_reg(netG, noise, labels=gen_labels)
+                o_loss = ortho_reg(netG)
                 
-                total_g = g_adv + p_loss + j_loss
+                total_g = g_adv + p_loss + j_loss + o_loss
                 
             scaler.scale(total_g).backward()
             scaler.step(optimizerG)
@@ -121,8 +132,10 @@ def main():
         schedulerG.step()
         schedulerC.step()
         
+        if epoch % 10 == 0 or epoch == args.epochs - 1:
+            print(f"[{epoch}/{args.epochs}] Loss_C: {c_loss.item():.4f} Loss_G: {total_g.item():.4f} J: {j_loss.item():.4f} O: {o_loss.item():.4f}")
+        
         if epoch % 500 == 0 or epoch == args.epochs - 1:
-            print(f"[{epoch}/{args.epochs}] Loss_C: {c_loss.item():.4f} Loss_G: {total_g.item():.4f}")
             # Save EMA version as the primary
             ema.apply_shadow()
             torch.save(netG.state_dict(), output_dir / "models" / f"netG_epoch_{epoch}.pt")

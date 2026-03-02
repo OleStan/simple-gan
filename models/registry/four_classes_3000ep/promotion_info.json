@@ -1,0 +1,14 @@
+{
+  "source_directory": "improved_wgan_v2_nz20_nc4_20260301_135007",
+  "metrics": {
+    "NZ": 20,
+    "Model": "Improved WGAN v2",
+    "Score": 0.0469,
+    "MMD": 0.0068,
+    "W-Dist": 0.0538,
+    "Lipschitz": 0.01,
+    "Moments": 0.2783,
+    "Directory": "improved_wgan_v2_nz20_nc4_20260301_135007"
+  },
+  "date_promoted": "2026-03-01 15:13:20.452365"
+}

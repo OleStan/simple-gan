@@ -122,7 +122,7 @@ class JacobianRegularizer(nn.Module):
         # We only need the mean behavior for speed
         output, _, _ = G(z, labels=labels)
         
-        # Random projection for fast Jacobian norm estimation (Hutchinson's trace estimator style)
+        # Random projection for fast Jacobian norm estimation
         v = torch.randn_like(output)
         v = v / (torch.norm(v, dim=1, keepdim=True) + 1e-8)
         
@@ -132,6 +132,26 @@ class JacobianRegularizer(nn.Module):
         # Loss is the norm of the gradient
         loss = v_J.pow(2).sum(dim=1).mean()
         return self.lambda_jacobian * loss
+
+class OrthogonalRegularizer(nn.Module):
+    """
+    Forces generator weights to be orthogonal.
+    Prevents mode collapse and ensures latent dimensions are independent.
+    """
+    def __init__(self, lambda_ortho=1e-4):
+        super().__init__()
+        self.lambda_ortho = lambda_ortho
+
+    def forward(self, model):
+        loss = 0
+        for name, param in model.named_parameters():
+            if 'weight' in name and len(param.shape) >= 2:
+                # For Linear and Conv layers
+                w = param.view(param.shape[0], -1)
+                sym = torch.mm(w, w.t())
+                identity = torch.eye(w.shape[0], device=w.device)
+                loss += torch.norm(sym - identity)
+        return self.lambda_ortho * loss
 
 class GeneratorEMA:
     """

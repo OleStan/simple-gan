@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 """
 Run GAN quality validation for trained models.
-
-Usage:
-    python run_quality_check.py --model dual_wgan --model_dir ./results/dual_wgan_20260131_213107
-    python run_quality_check.py --model improved_wgan_v2 --model_dir ./results/improved_wgan_v2_20260126_223129
 """
 
 import argparse
@@ -25,14 +21,8 @@ def load_dual_wgan_generator(model_dir: str, nz: int, K: int, device: torch.devi
     model_path = Path(model_dir) / 'models' / 'netG_final.pth'
     if not model_path.exists():
         model_path = Path(model_dir) / 'models' / 'netG_final.pt'
-    if not model_path.exists():
-        epoch_files = list(Path(model_dir).glob('models/netG_epoch_*.pth'))
-        if not epoch_files:
-            raise FileNotFoundError(f"No generator checkpoints found in {model_dir}/models/")
-        epoch_files.sort(key=lambda p: int(p.stem.replace('netG_epoch_', '')))
-        model_path = epoch_files[-1]
-
-    netG.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
+    
+    netG.load_state_dict(torch.load(model_path, map_location=device, weights_only=False))
     netG.eval()
     return netG
 
@@ -45,7 +35,19 @@ def load_improved_wgan_v2_generator(model_dir: str, nz: int, K: int, device: tor
     if not model_path.exists():
         model_path = Path(model_dir) / 'models' / 'netG_final.pth'
 
-    netG.load_state_dict(torch.load(model_path, map_location=device, weights_only=True))
+    netG.load_state_dict(torch.load(model_path, map_location=device, weights_only=False))
+    netG.eval()
+    return netG
+
+def load_improved_wgan_v3_generator(model_dir: str, nz: int, K: int, device: torch.device, n_classes: int = 1):
+    from models.improved_wgan_v3.model import ContinuousConditionalGenerator
+    netG = ContinuousConditionalGenerator(nz=nz, K=K, n_classes=n_classes).to(device)
+
+    model_path = Path(model_dir) / 'models' / 'netG_final.pt'
+    if not model_path.exists():
+        model_path = Path(model_dir) / 'models' / 'netG_final.pth'
+
+    netG.load_state_dict(torch.load(model_path, map_location=device, weights_only=False))
     netG.eval()
     return netG
 
@@ -64,8 +66,8 @@ def load_real_data(training_data_dir: str, norm_params_path: str, K: int):
     sigma_data = raw_data[:, :K]
     mu_data = raw_data[:, K:2*K]
 
-    sigma_norm = 2 * (sigma_data - norm_params['sigma_min']) / (norm_params['sigma_max'] - norm_params['sigma_min']) - 1
-    mu_norm = 2 * (mu_data - norm_params['mu_min']) / (norm_params['mu_max'] - norm_params['mu_min']) - 1
+    sigma_norm = 2 * (sigma_data - norm_params['sigma_min']) / (norm_params['sigma_max'] - norm_params['sigma_min'] + 1e-8) - 1
+    mu_norm = 2 * (mu_data - norm_params['mu_min']) / (norm_params['mu_max'] - norm_params['mu_min'] + 1e-8) - 1
 
     return np.concatenate([sigma_norm, mu_norm], axis=1), labels
 
@@ -83,11 +85,11 @@ def denormalize_data(data: np.ndarray, norm_params: dict, K: int) -> np.ndarray:
 def main():
     parser = argparse.ArgumentParser(description='Run GAN Quality Validation')
     parser.add_argument('--model', type=str, required=True,
-                        choices=['dual_wgan', 'improved_wgan_v2'],
+                        choices=['dual_wgan', 'improved_wgan_v2', 'improved_wgan_v3'],
                         help='Model type to evaluate')
     parser.add_argument('--model_dir', type=str, required=True,
                         help='Path to trained model directory')
-    parser.add_argument('--training_data', type=str, default='../../data/training',
+    parser.add_argument('--training_data', type=str, default='./data/training',
                         help='Path to training data directory')
     parser.add_argument('--n_generated', type=int, default=1000,
                         help='Number of samples to generate for evaluation')
@@ -98,6 +100,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
+    # For V3, the model_dir might be deeper. Let's find normalization_params.json
     norm_params_path = Path(args.model_dir) / 'normalization_params.json'
     if not norm_params_path.exists():
         norm_params_path = Path(args.training_data) / 'normalization_params.json'
@@ -113,6 +116,9 @@ def main():
         with open(config_path, 'r') as f:
             model_config = json.load(f)
         nz = model_config.get('nz', 100)
+        # n_classes might be in config for V3
+        if 'n_classes' in model_config:
+            n_classes = model_config['n_classes']
     else:
         nz = 100
 
@@ -127,16 +133,16 @@ def main():
     if args.model == 'dual_wgan':
         generator = load_dual_wgan_generator(args.model_dir, nz, K, device, n_classes=n_classes)
         model_name = "Dual-Head WGAN"
-    else:
+    elif args.model == 'improved_wgan_v2':
         generator = load_improved_wgan_v2_generator(args.model_dir, nz, K, device, n_classes=n_classes)
         model_name = "Improved WGAN v2"
+    else:
+        generator = load_improved_wgan_v3_generator(args.model_dir, nz, K, device, n_classes=n_classes)
+        model_name = "Improved WGAN v3 (ISR)"
 
     print("Loading real data...")
     real_data_normalized, real_labels = load_real_data(args.training_data, str(norm_params_path), K)
     print(f"  Real data shape: {real_data_normalized.shape}")
-    if n_classes > 1:
-        for c in range(n_classes):
-            print(f"  Class {c}: {(real_labels == c).sum()} samples")
 
     checker = GANQualityChecker(
         K=K, nz=nz,
@@ -150,6 +156,9 @@ def main():
     if n_classes > 1:
         n_per_class = args.n_generated // n_classes
         gen_labels_input = np.repeat(np.arange(n_classes, dtype=np.int64), n_per_class)
+        # Pad to match n_generated
+        if len(gen_labels_input) < args.n_generated:
+            gen_labels_input = np.pad(gen_labels_input, (0, args.n_generated - len(gen_labels_input)), mode='edge')
         gen_labels_input = gen_labels_input[:args.n_generated]
 
     print(f"\nGenerating {args.n_generated} samples...")
@@ -195,14 +204,10 @@ def main():
         passed = details.get('passed', 'N/A')
         status_str = "PASS" if passed is True else ("FAIL" if passed is False else "INFO")
         print(f"  {criterion}: {status_str}")
-        for key, val in details.items():
-            if key != 'passed':
-                print(f"    {key}: {val}")
 
     overall = "PASSED" if summary['overall_passed'] else "FAILED"
     print(f"\n  Overall: {overall}")
     print(f"\nFull report: {report_path}")
-    print(f"Plots: {output_dir}/plots/")
 
 
 if __name__ == '__main__':

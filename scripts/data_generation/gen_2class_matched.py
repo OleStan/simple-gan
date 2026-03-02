@@ -28,7 +28,12 @@ def _sigmoid_profile(r, P_min, P_max, d, r_0=None):
     return P_min + (P_max - P_min) * norm
 
 def main():
-    output_dir = Path('./data/training')
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output_dir', type=str, default='./data/training')
+    args = parser.parse_args()
+    
+    output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(42)
     r = np.linspace(R_MIN, R_MAX, N_POINTS)

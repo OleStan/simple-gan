@@ -1,0 +1,104 @@
+{
+  "model_name": "Improved WGAN v2",
+  "overall_passed": false,
+  "criteria": {
+    "1_moment_matching": {
+      "passed": true,
+      "mean_rel_diff": 0.2782969729949514,
+      "variance_ratio": 0.964128600000739,
+      "mode_collapse": false,
+      "noise_amplification": false
+    },
+    "2_distribution_distance": {
+      "wasserstein_mean": 0.05383397300189977,
+      "mmd_score": 0.006823981732553719,
+      "mmd_sigma": 0.004309657712840309,
+      "mmd_mu": 0.00251432401971341
+    },
+    "3_latent_traversal": {
+      "passed": true,
+      "active_dimensions": 18,
+      "total_tested": 20,
+      "inactive_ratio": 0.09999999999999998,
+      "smoothness_score": 1.0
+    },
+    "4_physics_consistency": {
+      "passed": false,
+      "bounds_sigma_ratio": 1.0,
+      "bounds_mu_ratio": 1.0,
+      "forward_valid": 20,
+      "forward_total": 20
+    },
+    "5_noise_robustness": {
+      "passed": true,
+      "mean_lipschitz": 0.00835071156732738
+    },
+    "6_class_separation": {
+      "passed": true,
+      "n_classes": 4,
+      "separation_ratio": 0.98618205701817,
+      "inter_class_wasserstein_real": 0.5357074169091697,
+      "inter_class_wasserstein_gen": 0.5283050424659935,
+      "per_class_real": [
+        {
+          "sigma_mean": -0.5706923140524433,
+          "sigma_std": 0.3459072826182121,
+          "mu_mean": -0.6591378892020975,
+          "mu_std": 0.2938389164282545,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": 0.22920357131371863,
+          "sigma_std": 0.522537274965315,
+          "mu_mean": -0.025880598253411286,
+          "mu_std": 0.7614743220500958,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": -0.5705181677244848,
+          "sigma_std": 0.23200936815436968,
+          "mu_mean": -0.6582537620009165,
+          "mu_std": 0.1970293783894746,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": 0.228518971224424,
+          "sigma_std": 0.3510428848515914,
+          "mu_mean": -0.026123936290530666,
+          "mu_std": 0.5098200010107448,
+          "n_samples": 2000
+        }
+      ],
+      "per_class_gen": [
+        {
+          "sigma_mean": -0.5119672417640686,
+          "sigma_std": 0.2740739583969116,
+          "mu_mean": -0.6206123232841492,
+          "mu_std": 0.21234360337257385,
+          "n_samples": 125
+        },
+        {
+          "sigma_mean": 0.2829214632511139,
+          "sigma_std": 0.47625070810317993,
+          "mu_mean": -0.03482803329825401,
+          "mu_std": 0.7759782075881958,
+          "n_samples": 125
+        },
+        {
+          "sigma_mean": -0.6001709699630737,
+          "sigma_std": 0.2694370746612549,
+          "mu_mean": -0.6796996593475342,
+          "mu_std": 0.2742924392223358,
+          "n_samples": 125
+        },
+        {
+          "sigma_mean": 0.23965191841125488,
+          "sigma_std": 0.33539697527885437,
+          "mu_mean": -0.011836989782750607,
+          "mu_std": 0.5433433055877686,
+          "n_samples": 125
+        }
+      ]
+    }
+  }
+}
