@@ -1,0 +1,130 @@
+{
+  "experiment": "gan_exp03_noise_sample0000",
+  "description": "Noise robustness with GAN prior",
+  "timestamp": "20260226_213631",
+  "config": {
+    "sample_idx": 0,
+    "noise_levels": [
+      0.0,
+      0.001,
+      0.005,
+      0.01,
+      0.02,
+      0.05
+    ],
+    "n_restarts": 4,
+    "fd_epsilon": 0.001,
+    "impedance_tolerance": 1e-05
+  },
+  "aggregate": {
+    "n_levels": 6,
+    "n_passed": 0,
+    "best_mismatch_ohm": 2.9560505259138095e-05,
+    "worst_mismatch_ohm": 0.00013906421686528026,
+    "noise_breakdown_factor": 4.704392419757138
+  },
+  "levels": [
+    {
+      "noise_frac": 0.0,
+      "noise_pct": 0.0,
+      "passed": false,
+      "best_mismatch_ohm": 4.111895364561097e-05,
+      "all_mismatches_ohm": [
+        4.111895364561097e-05,
+        6.563697245964678e-05,
+        0.0004261043379332397,
+        0.00029005414041848623
+      ],
+      "sigma_rmse": 899904.0732507543,
+      "sigma_rmse_pct": 3.2283521126350565,
+      "mu_rmse": 0.4721869386322617,
+      "mu_rmse_pct": 9.955496458380846,
+      "elapsed_s": 118.45104575000005
+    },
+    {
+      "noise_frac": 0.001,
+      "noise_pct": 0.1,
+      "passed": false,
+      "best_mismatch_ohm": 6.746306678283268e-05,
+      "all_mismatches_ohm": [
+        0.00022086909394360832,
+        7.244995029820646e-05,
+        0.0002233024207223625,
+        6.746306678283268e-05
+      ],
+      "sigma_rmse": 2069689.8593570765,
+      "sigma_rmse_pct": 7.424888750440124,
+      "mu_rmse": 0.41436128953701,
+      "mu_rmse_pct": 8.73631185653888,
+      "elapsed_s": 83.31683750002412
+    },
+    {
+      "noise_frac": 0.005,
+      "noise_pct": 0.5,
+      "passed": false,
+      "best_mismatch_ohm": 2.9560505259138095e-05,
+      "all_mismatches_ohm": [
+        2.9560505259138095e-05,
+        0.000398031398962409,
+        0.00038828795218349933,
+        6.308587800025454e-05
+      ],
+      "sigma_rmse": 882906.4356520636,
+      "sigma_rmse_pct": 3.167374102997525,
+      "mu_rmse": 0.4768266559866763,
+      "mu_rmse_pct": 10.053319345696533,
+      "elapsed_s": 100.3321966669755
+    },
+    {
+      "noise_frac": 0.01,
+      "noise_pct": 1.0,
+      "passed": false,
+      "best_mismatch_ohm": 0.00013906421686528026,
+      "all_mismatches_ohm": [
+        0.00013906421686528026,
+        0.00035069859432434043,
+        0.0004799122155294823,
+        0.00021011183605939462
+      ],
+      "sigma_rmse": 874223.6988435736,
+      "sigma_rmse_pct": 3.136225303306147,
+      "mu_rmse": 0.4729228670135719,
+      "mu_rmse_pct": 9.97101262749594,
+      "elapsed_s": 51.919971416995395
+    },
+    {
+      "noise_frac": 0.02,
+      "noise_pct": 2.0,
+      "passed": false,
+      "best_mismatch_ohm": 9.452684773073736e-05,
+      "all_mismatches_ohm": [
+        9.452684773073736e-05,
+        0.0002470255793561111,
+        0.000129520311245184,
+        0.0001463190890983329
+      ],
+      "sigma_rmse": 894593.4383804224,
+      "sigma_rmse_pct": 3.2093005272353627,
+      "mu_rmse": 0.47226577914260576,
+      "mu_rmse_pct": 9.957158716180228,
+      "elapsed_s": 71.14306520798709
+    },
+    {
+      "noise_frac": 0.05,
+      "noise_pct": 5.0,
+      "passed": false,
+      "best_mismatch_ohm": 4.3188769495640534e-05,
+      "all_mismatches_ohm": [
+        0.00014250625052141037,
+        0.00011325110871094455,
+        0.0002364758454033746,
+        4.3188769495640534e-05
+      ],
+      "sigma_rmse": 2044832.278704164,
+      "sigma_rmse_pct": 7.3357136645602035,
+      "mu_rmse": 0.40132516918588584,
+      "mu_rmse_pct": 8.461460861374619,
+      "elapsed_s": 110.44130566599779
+    }
+  ]
+}

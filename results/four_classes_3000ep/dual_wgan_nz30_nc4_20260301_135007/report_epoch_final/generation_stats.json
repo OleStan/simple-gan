@@ -1,0 +1,41 @@
+{
+  "n_samples": 1000,
+  "K": 50,
+  "n_classes": 4,
+  "sigma": {
+    "min": 9366014.0,
+    "max": 59229232.0,
+    "mean": 30000886.0,
+    "std": 14019826.0
+  },
+  "mu": {
+    "min": 1.0100969076156616,
+    "max": 85.5666275024414,
+    "mean": 29.3483943939209,
+    "std": 24.524324417114258
+  },
+  "model_dir": "/workspace/GANs-for-1D-Signal/results/four_classes_3000ep/dual_wgan_nz30_nc4_20260301_135007",
+  "generation_date": "2026-03-01T15:12:49.774905",
+  "per_class": {
+    "0": {
+      "sigma_mean": 18407562.0,
+      "mu_mean": 14.73696231842041,
+      "n_samples": 250
+    },
+    "1": {
+      "sigma_mean": 40090140.0,
+      "mu_mean": 42.47929000854492,
+      "n_samples": 250
+    },
+    "2": {
+      "sigma_mean": 20501668.0,
+      "mu_mean": 16.711509704589844,
+      "n_samples": 250
+    },
+    "3": {
+      "sigma_mean": 41004180.0,
+      "mu_mean": 43.4658317565918,
+      "n_samples": 250
+    }
+  }
+}

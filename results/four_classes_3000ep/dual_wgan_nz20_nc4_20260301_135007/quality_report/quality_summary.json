@@ -1,0 +1,104 @@
+{
+  "model_name": "Dual-Head WGAN",
+  "overall_passed": false,
+  "criteria": {
+    "1_moment_matching": {
+      "passed": true,
+      "mean_rel_diff": 1.2242586767018644,
+      "variance_ratio": 1.2301057237113384,
+      "mode_collapse": false,
+      "noise_amplification": false
+    },
+    "2_distribution_distance": {
+      "wasserstein_mean": 0.06817019748478247,
+      "mmd_score": 0.02477218496757172,
+      "mmd_sigma": 0.012252558772334776,
+      "mmd_mu": 0.012519626195236944
+    },
+    "3_latent_traversal": {
+      "passed": true,
+      "active_dimensions": 20,
+      "total_tested": 20,
+      "inactive_ratio": 0.0,
+      "smoothness_score": 1.0
+    },
+    "4_physics_consistency": {
+      "passed": false,
+      "bounds_sigma_ratio": 1.0,
+      "bounds_mu_ratio": 1.0,
+      "forward_valid": 20,
+      "forward_total": 20
+    },
+    "5_noise_robustness": {
+      "passed": true,
+      "mean_lipschitz": 0.08254938036203384
+    },
+    "6_class_separation": {
+      "passed": true,
+      "n_classes": 4,
+      "separation_ratio": 1.056405131173426,
+      "inter_class_wasserstein_real": 0.5357074169091697,
+      "inter_class_wasserstein_gen": 0.565924064136149,
+      "per_class_real": [
+        {
+          "sigma_mean": -0.5706923140524433,
+          "sigma_std": 0.3459072826182121,
+          "mu_mean": -0.6591378892020975,
+          "mu_std": 0.2938389164282545,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": 0.22920357131371863,
+          "sigma_std": 0.522537274965315,
+          "mu_mean": -0.025880598253411286,
+          "mu_std": 0.7614743220500958,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": -0.5705181677244848,
+          "sigma_std": 0.23200936815436968,
+          "mu_mean": -0.6582537620009165,
+          "mu_std": 0.1970293783894746,
+          "n_samples": 2000
+        },
+        {
+          "sigma_mean": 0.228518971224424,
+          "sigma_std": 0.3510428848515914,
+          "mu_mean": -0.026123936290530666,
+          "mu_std": 0.5098200010107448,
+          "n_samples": 2000
+        }
+      ],
+      "per_class_gen": [
+        {
+          "sigma_mean": -0.5804724097251892,
+          "sigma_std": 0.34121403098106384,
+          "mu_mean": -0.6426230669021606,
+          "mu_std": 0.3205067813396454,
+          "n_samples": 125
+        },
+        {
+          "sigma_mean": 0.24530959129333496,
+          "sigma_std": 0.4965137243270874,
+          "mu_mean": 0.007260547485202551,
+          "mu_std": 0.7786081433296204,
+          "n_samples": 125
+        },
+        {
+          "sigma_mean": -0.600206196308136,
+          "sigma_std": 0.22696226835250854,
+          "mu_mean": -0.6856556534767151,
+          "mu_std": 0.23961660265922546,
+          "n_samples": 125
+        },
+        {
+          "sigma_mean": 0.287477970123291,
+          "sigma_std": 0.36619865894317627,
+          "mu_mean": 0.01715388335287571,
+          "mu_std": 0.49204808473587036,
+          "n_samples": 125
+        }
+      ]
+    }
+  }
+}

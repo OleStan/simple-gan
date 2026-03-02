@@ -1,0 +1,9 @@
+{
+  "nz": 30,
+  "epochs": 3000,
+  "batch_size": 128,
+  "lr": 0.0001,
+  "data_dir": "/workspace/GANs-for-1D-Signal/data/training",
+  "n_classes": 2,
+  "K": 50
+}

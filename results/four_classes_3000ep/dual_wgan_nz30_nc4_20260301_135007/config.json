@@ -1,0 +1,15 @@
+{
+  "nz": 30,
+  "K": 50,
+  "output_dim": 100,
+  "nz_to_output_ratio": 0.3,
+  "batch_size": 2048,
+  "num_workers": 8,
+  "n_epochs": 3000,
+  "lr": 0.0001,
+  "n_critic": 5,
+  "lambda_gp": 10,
+  "n_classes": 4,
+  "optimizations": "AMP + large_batch + multi_worker + pin_memory",
+  "experiment": "latent_space_nz30"
+}
